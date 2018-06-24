@@ -2,7 +2,7 @@ image: golang:1.10-alpine
 
 stages:
     - build
-      # - test
+    - test
     - release
     - deploy
 
