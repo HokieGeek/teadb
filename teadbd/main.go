@@ -29,7 +29,7 @@ func main() {
 func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
 	teas, err := teadb.GetAllTeas()
 	if err != nil {
-		log.Printf("ERROR: %s\n", err.Error)
+		log.Printf("ERROR: %s\n", err.Error())
 	}
 	postJSON(w, http.StatusOK, teas)
 }
