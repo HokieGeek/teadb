@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 
-	"gitlab.com/hokiegeek/teadb"
+	"gitlab.com/hokiegeek.net/teadb"
 )
 
 func main() {

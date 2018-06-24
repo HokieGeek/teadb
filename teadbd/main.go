@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"gitlab.com/hokiegeek/teadb"
+	"gitlab.com/hokiegeek.net/teadb"
 )
 
 func main() {
