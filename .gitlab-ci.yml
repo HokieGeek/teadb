@@ -13,7 +13,7 @@ cache:
 .build-template: &build-template
   stage: build
   variables:
-      workdir: /go/src/gitlab.com/hokiegeek.net/teadb
+      WORKDIR: /go/src/gitlab.com/hokiegeek.net/teadb
   before_script:
     - apk add --update git
   script:
