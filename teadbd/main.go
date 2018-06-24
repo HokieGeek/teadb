@@ -27,6 +27,7 @@ func main() {
 }
 
 func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("/teas")
 	teas, err := teadb.GetAllTeas()
 	if err != nil {
 		log.Printf("ERROR: %s\n", err.Error())
@@ -35,6 +36,7 @@ func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func teaHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("/tea")
 	vars := mux.Vars(r)
 
 	id, err := strconv.Atoi(vars["id"])
@@ -75,6 +77,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func entryHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("tea entry")
 	vars := mux.Vars(r)
 
 	teaid, err := strconv.Atoi(vars["teaid"])
