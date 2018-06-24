@@ -2,22 +2,21 @@ image: golang:1.10-alpine
 
 stages:
     - build
-    - test
+      # - test
     - release
     - deploy
 
-      # cache:
-      #   paths:
-      #     - node_modules/
-      #     - dist/
+cache:
+  paths:
+    - /go
 
 .build-template: &build-template
   stage: build
   before_script:
-    - go get -u butt.google.com/go/datastore
-    - go get -u github.com/gorilla/mux
+    - apk add --update git
   script:
-    - go install ./...
+    - go get -d -v ./...
+    - go install -v ./...
 
 build-release:
   <<: *build-template
@@ -43,7 +42,7 @@ build-release:
 unit-test:
   stage: test
   script:
-   - go test ./...
+    - go test ./...
 
 ## Create container
 .build-docker-image: &build-docker-image
@@ -79,42 +78,42 @@ create-container:
   except:
     - branches
 
-      # .server-connector-template: &server-connector-template
-      #   image: alpine:latest
-      #   before_script:
-      #     - apk add --update --no-cache openssh
-      #     - echo $HOST_SSH_KEY | sed -e 's/ /\n/g' | sed -r -e '1,4{:a;N;4!ba;s/\n/ /g}' | sed -r -e '/^-{5}END/,${:z;N;$!bz;s/\n/ /g}' > /tmp/sshkey
-      #     - chmod 0600 /tmp/sshkey
-      # 
-      # ## Service restarter
-      # .service-restarter: &service-restarter
-      #   <<: *server-connector-template
-      #   stage: deploy
-      #   script:
-      #     - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${SERVICE} $ADMIN_USER@hokiegeek.net:/tmp
-      #     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo mv /tmp/${SERVICE} /etc/systemd/system/ && sudo systemctl daemon-reload"
-      #     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo systemctl enable ${SERVICE}; sudo systemctl restart ${SERVICE}"
-      #   retry: 1
-      # 
-      # restart-service-dev:
-      #   <<: *service-restarter
-      #   variables:
-      #     SERVICE: hgteadbdev.service
-      #     url: http://tea.hokiegeek.net/dev
-      #   environment:
-      #     name: staging
-      #   except:
-      #     - tags
-      #     - master
-      # 
-      # restart-service:
-      #   <<: *service-restarter
-      #   variables:
-      #     SERVICE: hgteadb.service
-      #   environment:
-      #     name: production
-      #     url: http://tea.hokiegeek.net
-      #   only:
-      #     - tags
-      #   except:
-      #     - branches
+.server-connector-template: &server-connector-template
+  image: alpine:latest
+  before_script:
+    - apk add --update --no-cache openssh
+    - echo $HOST_SSH_KEY | sed -e 's/ /\n/g' | sed -r -e '1,4{:a;N;4!ba;s/\n/ /g}' | sed -r -e '/^-{5}END/,${:z;N;$!bz;s/\n/ /g}' > /tmp/sshkey
+    - chmod 0600 /tmp/sshkey
+
+## Service restarter
+.service-restarter: &service-restarter
+  <<: *server-connector-template
+  stage: deploy
+  script:
+    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${SERVICE} $ADMIN_USER@hokiegeek.net:/tmp
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo mv /tmp/${SERVICE} /etc/systemd/system/ && sudo systemctl daemon-reload"
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo systemctl enable ${SERVICE}; sudo systemctl restart ${SERVICE}"
+  retry: 1
+
+restart-service-dev:
+  <<: *service-restarter
+  variables:
+    SERVICE: hgteadbdev.service
+    url: http://tea.hokiegeek.net/dev
+  environment:
+    name: staging
+  except:
+    - tags
+    - master
+
+restart-service:
+  <<: *service-restarter
+  variables:
+    SERVICE: hgteadb.service
+  environment:
+    name: production
+    url: http://tea.hokiegeek.net
+  only:
+    - tags
+  except:
+    - branches
