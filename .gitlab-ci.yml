@@ -15,6 +15,7 @@ stages:
   stage: build
   before_script:
     - go get -u butt.google.com/go/datastore
+    - go get -u github.com/gorilla/mux
   script:
     - go install ./...
 
