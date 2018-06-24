@@ -29,6 +29,10 @@ type TeaEntry struct {
 	FixinsList        []int    `json:"fixins_list"`
 }
 
+func (t *TeaEntry) ID() string {
+	return fmt.Sprintf("%s@%s", t.Date, t.Time)
+}
+
 // Tea encapsulates a specific tea and its journal entries
 type Tea struct {
 	ID               int        `json:"id"`
@@ -78,6 +82,12 @@ func CreateTea(tea Tea) error {
 	return saveTea(tea)
 }
 
+// UpdateTea updates a new tea entity
+func UpdateTea(tea Tea) error {
+	// TODO: validate?
+	return saveTea(tea)
+}
+
 // CreateEntry creates a new entry on an existing tea
 func CreateEntry(id int, entry TeaEntry) error {
 	tea, err := GetTeaByID(id)
@@ -89,7 +99,25 @@ func CreateEntry(id int, entry TeaEntry) error {
 	tea.Entries = append(tea.Entries, entry)
 
 	return saveTea(tea)
-	return nil
+}
+
+// UpdateEntry updates an existing entry
+func UpdateEntry(id int, entry TeaEntry) error {
+	tea, err := GetTeaByID(id)
+	if err != nil {
+		return err
+	}
+
+	// TODO: validate
+
+	for i, teaEntry := range tea.Entries {
+		if entry.ID() == teaEntry.ID() {
+			tea.Entries[i] = entry
+			break
+		}
+	}
+
+	return saveTea(tea)
 }
 
 // GetAllTeas retrieves every tea entity
