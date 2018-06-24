@@ -154,6 +154,15 @@ func convertSpreadsheetTeaToTea(sTea spreadsheetTea) teadb.Tea {
 }
 
 func saveToFile(filename string) error {
-	fmt.Println("TODO")
-	return nil
+	teas, err := teadb.GetAllTeas()
+	if err != nil {
+		return err
+	}
+
+	teasJSON, err := json.Marshal(teas)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(filename, teasJSON, 0644)
 }
