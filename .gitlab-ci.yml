@@ -1,0 +1,119 @@
+image: golang:1.10-alpine
+
+stages:
+    - build
+    - test
+    - release
+    - deploy
+
+      # cache:
+      #   paths:
+      #     - node_modules/
+      #     - dist/
+
+.build-template: &build-template
+  stage: build
+  before_script:
+    - go get -u butt.google.com/go/datastore
+  script:
+    - go install ./...
+
+build-release:
+  <<: *build-template
+
+  # build-snapshot:
+  #   <<: *build-template
+  #   except:
+  #     - tags
+  #     - branches
+  # 
+  # build-branch:
+  #   <<: *build-template
+  #   variables:
+  #     version_suffix: $CI_COMMIT_REF_NAME
+  #   only:
+  #     - branches
+  # 
+  # build-release:
+  #   <<: *build-template
+  #   only:
+  #     - tags
+
+unit-test:
+  stage: test
+  script:
+   - go test ./...
+
+## Create container
+.build-docker-image: &build-docker-image
+  stage: release
+  image: docker:git
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+  script:
+    - docker build -t $IMAGE_TAG .
+    - docker push $IMAGE_TAG
+  retry: 1
+
+create-container-dev:
+  <<: *build-docker-image
+  variables:
+    IMAGE_TAG: $CI_REGISTRY_IMAGE:SNAPSHOT
+  except:
+    - tags
+    - master
+
+create-container:
+  <<: *build-docker-image
+  variables:
+    IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+    IMAGE_LATEST_TAG: $CI_REGISTRY_IMAGE:latest
+  after_script:
+    - docker tag $IMAGE_TAG $IMAGE_LATEST_TAG
+    - docker push $IMAGE_LATEST_TAG
+  only:
+    - tags
+  except:
+    - branches
+
+      # .server-connector-template: &server-connector-template
+      #   image: alpine:latest
+      #   before_script:
+      #     - apk add --update --no-cache openssh
+      #     - echo $HOST_SSH_KEY | sed -e 's/ /\n/g' | sed -r -e '1,4{:a;N;4!ba;s/\n/ /g}' | sed -r -e '/^-{5}END/,${:z;N;$!bz;s/\n/ /g}' > /tmp/sshkey
+      #     - chmod 0600 /tmp/sshkey
+      # 
+      # ## Service restarter
+      # .service-restarter: &service-restarter
+      #   <<: *server-connector-template
+      #   stage: deploy
+      #   script:
+      #     - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${SERVICE} $ADMIN_USER@hokiegeek.net:/tmp
+      #     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo mv /tmp/${SERVICE} /etc/systemd/system/ && sudo systemctl daemon-reload"
+      #     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo systemctl enable ${SERVICE}; sudo systemctl restart ${SERVICE}"
+      #   retry: 1
+      # 
+      # restart-service-dev:
+      #   <<: *service-restarter
+      #   variables:
+      #     SERVICE: hgteadbdev.service
+      #     url: http://tea.hokiegeek.net/dev
+      #   environment:
+      #     name: staging
+      #   except:
+      #     - tags
+      #     - master
+      # 
+      # restart-service:
+      #   <<: *service-restarter
+      #   variables:
+      #     SERVICE: hgteadb.service
+      #   environment:
+      #     name: production
+      #     url: http://tea.hokiegeek.net
+      #   only:
+      #     - tags
+      #   except:
+      #     - branches
