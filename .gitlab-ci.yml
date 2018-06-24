@@ -12,11 +12,15 @@ cache:
 
 .build-template: &build-template
   stage: build
+  variables:
+      workdir: /go/src/gitlab.com/hokiegeek.net/teadb
   before_script:
     - apk add --update git
   script:
-    - go get -d -v ./...
-    - go install -v ./...
+    - mkdir -p $WORKDIR
+    - cp -r . $WORKDIR
+    - cd $WORKDIR && go get -d -v ./...
+    - cd $WORKDIR && go install -v ./...
 
 build-release:
   <<: *build-template
