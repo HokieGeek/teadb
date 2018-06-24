@@ -13,44 +13,47 @@ import (
 
 const kind = "tea"
 
+// TeaEntries encapsulates the data needed for a journal entry
+type TeaEntry struct {
+	Comments          string   `json:"comments"`
+	Timestamp         string   `json:"timestamp"`
+	Date              string   `json:"date"` // TODO
+	Time              string   `json:"time"` // TODO
+	Rating            int      `json:"rating"`
+	Pictures          []string `json:"pictures"`
+	Steeptime         string   `json:"steeptime"`
+	SteepingvesselIdx int      `json:"steepingvessel_idx"`
+	Steeptemperature  int      `json:"steeptemperature"` // TODO: in F
+	Sessioninstance   string   `json:"sessioninstance"`
+	Sessionclosed     bool     `json:"sessionclosed"`
+	FixinsList        []int    `json:"fixins_list"`
+}
+
 // Tea encapsulates a specific tea and its journal entries
 type Tea struct {
-	ID               int      `json:"id"`
-	Name             string   `json:"name"`
-	Timestamp        string   `json:"timestamp"` // TODO
-	Date             string   `json:"date"`      // TODO
-	Type             string   `json:"type"`
-	Region           string   `json:"region"`
-	Year             int      `json:"year"`
-	FlushIdx         string   `json:"flush_idx"`
-	Purchaselocation string   `json:"purchaselocation"`
-	Purchasedate     string   `json:"purchasedate"`
-	Purchaseprice    int      `json:"purchaseprice"`
-	Comments         string   `json:"comments"`
-	Pictures         []string `json:"pictures"`
-	Country          string   `json:"country"`
-	Leafgrade        string   `json:"leafgrade"`
-	Blendedteas      string   `json:"blendedteas"`
-	Blendratio       string   `json:"blendratio"`
-	Size             string   `json:"size"`
-	Stocked          bool     `json:"stocked"`
-	Aging            bool     `json:"aging"`
-	PackagingIdx     int      `json:"packaging_idx"`
-	Sample           bool     `json:"sample"`
-	Entries          []struct {
-		Comments          string   `json:"comments"`
-		Timestamp         string   `json:"timestamp"`
-		Date              string   `json:"date"` // TODO
-		Time              string   `json:"time"` // TODO
-		Rating            int      `json:"rating"`
-		Pictures          []string `json:"pictures"`
-		Steeptime         string   `json:"steeptime"`
-		SteepingvesselIdx int      `json:"steepingvessel_idx"`
-		Steeptemperature  int      `json:"steeptemperature"` // TODO: in F
-		Sessioninstance   string   `json:"sessioninstance"`
-		Sessionclosed     bool     `json:"sessionclosed"`
-		FixinsList        []int    `json:"fixins_list"`
-	} `json:"entries"`
+	ID               int        `json:"id"`
+	Name             string     `json:"name"`
+	Timestamp        string     `json:"timestamp"` // TODO
+	Date             string     `json:"date"`      // TODO
+	Type             string     `json:"type"`
+	Region           string     `json:"region"`
+	Year             int        `json:"year"`
+	FlushIdx         int        `json:"flush_idx"`
+	Purchaselocation string     `json:"purchaselocation"`
+	Purchasedate     string     `json:"purchasedate"`
+	Purchaseprice    int        `json:"purchaseprice"`
+	Comments         string     `json:"comments"`
+	Pictures         []string   `json:"pictures"`
+	Country          string     `json:"country"`
+	Leafgrade        string     `json:"leafgrade"`
+	Blendedteas      string     `json:"blendedteas"`
+	Blendratio       string     `json:"blendratio"`
+	Size             string     `json:"size"`
+	Stocked          bool       `json:"stocked"`
+	Aging            bool       `json:"aging"`
+	PackagingIdx     int        `json:"packaging_idx"`
+	Sample           bool       `json:"sample"`
+	Entries          []TeaEntry `json:"entries"`
 }
 
 func getClient(ctx context.Context) (*datastore.Client, error) {
@@ -70,18 +73,23 @@ func getClient(ctx context.Context) (*datastore.Client, error) {
 }
 
 // CreateTea creates a new tea entity
-func CreateTea(id int) {
-	tea := Tea{
-		ID:       id,
-		Comments: "ADD MORE LATER",
-	}
-
-	saveTea(tea)
+func CreateTea(tea Tea) error {
+	// TODO: validate?
+	return saveTea(tea)
 }
 
 // CreateEntry creates a new entry on an existing tea
-func CreateEntry() {
-	// TODO
+func CreateEntry(id int, entry TeaEntry) error {
+	tea, err := GetTeaByID(id)
+	if err != nil {
+		return err
+	}
+
+	// TODO: validate
+	tea.Entries = append(tea.Entries, entry)
+
+	return saveTea(tea)
+	return nil
 }
 
 // GetAllTeas retrieves every tea entity
@@ -133,11 +141,11 @@ func GetTeaByID(id int) (Tea, error) {
 	return t, nil
 }
 
-func saveTea(tea Tea) {
+func saveTea(tea Tea) error {
 	ctx := context.Background()
 	client, err := getClient(ctx)
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		return fmt.Errorf("Failed to create client: %v", err)
 	}
 
 	// Create the Key instance.
@@ -145,8 +153,9 @@ func saveTea(tea Tea) {
 
 	// Saves the new entity.
 	if _, err := client.Put(ctx, key, &tea); err != nil {
-		log.Fatalf("Failed to save tea: %v", err)
+		return fmt.Errorf("Failed to save tea: %v", err)
 	}
 
-	fmt.Printf("Saved %v\n", key)
+	// fmt.Printf("Saved %v\n", key)
+	return nil
 }
