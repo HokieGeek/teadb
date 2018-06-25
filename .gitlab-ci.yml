@@ -11,22 +11,21 @@ variables:
 
 cache:
   paths:
-    - /go/**/*
+    - teadbd/teadbd
 
 before_script:
     - mkdir -p $WORKDIR
     - cp -r . $WORKDIR
     - cd $WORKDIR
+    - apk add --update git
+    - go get -d -v ./...
 
       # .build-template: &build-template
 build:
   stage: build
   script:
-    - pwd
-    - apk add --update git
-    - go get -d -v ./...
-    - go install -v ./...
-    - ls -l /go/bin
+    - cd teadbd && go build -v ./...
+    - ls -l teadbd
 
       # build-snapshot:
       #   <<: *build-template
