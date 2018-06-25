@@ -7,7 +7,8 @@ stages:
     - deploy
 
 variables:
-    CI_PROJECT_DIR: /go/src/gitlab.com/hokiegeek.net/teadb
+    WORKDIR_BASE: /go/src/gitlab.com
+    WORKDIR: ${WORKDIR_BASE}/hokiegeek.net/teadb
 
 cache:
   paths:
@@ -18,12 +19,12 @@ cache:
 build:
   stage: build
   before_script:
-    - pwd
+    - mkdir -p $WORKDIR_BASE
+    - mv /builds/* $WORKDIR_BASE
     - apk add --update git
   script:
-    - pwd
-    - go get -d -v ./...
-    - go install -v ./...
+    - cd $WORKDIR && go get -d -v ./...
+    - cd $WORKDIR && go install -v ./...
 
       # build-snapshot:
       #   <<: *build-template
@@ -45,7 +46,7 @@ build:
 unit-test:
   stage: test
   script:
-    - go test ./...
+    - cd $WORKDIR && go test ./...
 
 ## Create container
 .build-docker-image: &build-docker-image
