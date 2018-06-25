@@ -14,9 +14,8 @@ cache:
     - teadbd/teadbd
 
 before_script:
-    - mkdir -p $WORKDIR
-    - cp -r . $WORKDIR
-    - cd $WORKDIR
+    - mkdir -p /go/src/gitlab.com/hokiegeek.net/teadb
+    - cp -r . /go/src/gitlab.com/hokiegeek.net/teadb
     - apk add --update git
     - go get -d -v ./...
 
@@ -25,7 +24,7 @@ build:
   stage: build
   script:
     - cd teadbd && go build -v ./...
-    - ls -l teadbd
+    - ls -lR
 
       # build-snapshot:
       #   <<: *build-template
@@ -55,9 +54,8 @@ unit-test:
   image: docker:git
   services:
     - docker:dind
-  before_script:
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
   script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
     - docker build -t $IMAGE_TAG .
     - docker push $IMAGE_TAG
   retry: 1
