@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	// Imports the Google Butt Datastore client package.
 	"cloud.google.com/go/datastore"
@@ -11,26 +12,21 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-const kind = "tea"
+const kindTea = "tea"
 
 // TeaEntry encapsulates the data needed for a journal entry
 type TeaEntry struct {
-	Comments          string   `json:"comments"`
-	Timestamp         string   `json:"timestamp"`
-	Date              string   `json:"date"` // TODO
-	Time              int      `json:"time"` // TODO
-	Rating            int      `json:"rating"`
-	Pictures          []string `json:"pictures"`
-	Steeptime         string   `json:"steeptime"`
-	SteepingvesselIdx int      `json:"steepingvessel_idx"`
-	Steeptemperature  int      `json:"steeptemperature"` // TODO: in F
-	Sessioninstance   string   `json:"sessioninstance"`
-	Sessionclosed     bool     `json:"sessionclosed"`
-	FixinsList        []int    `json:"fixins_list"`
-}
-
-func (t *TeaEntry) id() string {
-	return fmt.Sprintf("%s@%d", t.Date, t.Time)
+	Comments          string     `json:"comments"`
+	Timestamp         string     `json:"timestamp"`
+	Datetime          *time.Time `json:"datetime"`
+	Rating            int        `json:"rating"`
+	Pictures          []string   `json:"pictures"`
+	Steeptime         string     `json:"steeptime"`
+	SteepingvesselIdx int        `json:"steepingvessel_idx"`
+	Steeptemperature  int        `json:"steeptemperature"` // TODO: in F
+	Sessioninstance   string     `json:"sessioninstance"`
+	Sessionclosed     bool       `json:"sessionclosed"`
+	Fixins            []string   `json:"fixins"`
 }
 
 // Tea encapsulates a specific tea and its journal entries
@@ -38,13 +34,13 @@ type Tea struct {
 	ID               int        `json:"id"`
 	Name             string     `json:"name"`
 	Timestamp        string     `json:"timestamp"` // TODO
-	Date             string     `json:"date"`      // TODO
+	Date             *time.Time `json:"date"`      // TODO
 	Type             string     `json:"type"`
 	Region           string     `json:"region"`
 	Year             int        `json:"year"`
-	FlushIdx         int        `json:"flush_idx"`
+	Flush            string     `json:"flush"`
 	Purchaselocation string     `json:"purchaselocation"`
-	Purchasedate     string     `json:"purchasedate"`
+	Purchasedate     *time.Time `json:"purchasedate"`
 	Purchaseprice    int        `json:"purchaseprice"`
 	Comments         string     `json:"comments"`
 	Pictures         []string   `json:"pictures"`
@@ -55,14 +51,12 @@ type Tea struct {
 	Size             string     `json:"size"`
 	Stocked          bool       `json:"stocked"`
 	Aging            bool       `json:"aging"`
-	PackagingIdx     int        `json:"packaging_idx"`
+	Packaging        string     `json:"packaging"`
 	Sample           bool       `json:"sample"`
 	Entries          []TeaEntry `json:"entries"`
 }
 
 func getClient(ctx context.Context) (*datastore.Client, error) {
-	// ctx := context.Background()
-
 	// Set your Google Butt Platform project ID.
 	projectID := "hgnet-tea"
 
@@ -112,7 +106,7 @@ func UpdateEntry(id int, entry TeaEntry) error {
 	// TODO: validate
 
 	for i, teaEntry := range tea.Entries {
-		if entry.id() == teaEntry.id() {
+		if entry.Datetime.UnixNano() == teaEntry.Datetime.UnixNano() {
 			tea.Entries[i] = entry
 			break
 		}
@@ -129,7 +123,7 @@ func GetAllTeas() ([]Tea, error) {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 
-	query := datastore.NewQuery(kind)
+	query := datastore.NewQuery(kindTea)
 
 	it := client.Run(ctx, query)
 
@@ -160,7 +154,7 @@ func GetTeaByID(id int) (Tea, error) {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 
-	key := datastore.NameKey(kind, strconv.Itoa(id), nil)
+	key := datastore.NameKey(kindTea, strconv.Itoa(id), nil)
 
 	var t Tea
 	if err = client.Get(ctx, key, &t); err != nil {
@@ -178,7 +172,7 @@ func saveTea(tea Tea) error {
 	}
 
 	// Create the Key instance.
-	key := datastore.NameKey(kind, strconv.Itoa(tea.ID), nil)
+	key := datastore.NameKey(kindTea, strconv.Itoa(tea.ID), nil)
 
 	// Saves the new entity.
 	if _, err := client.Put(ctx, key, &tea); err != nil {

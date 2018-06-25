@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"gitlab.com/hokiegeek.net/teadb"
 )
@@ -16,6 +18,7 @@ func main() {
 	// Command flags: load
 	loadCommand := flag.NewFlagSet("load", flag.ExitOnError)
 	loadFilePtr := loadCommand.String("file", "", "The filename to use")
+	isSpreadsheetPtr := loadCommand.Bool("spreadsheet", false, "Set if it should be processed as a spreadsheet")
 
 	// Command flags: save
 	saveCommand := flag.NewFlagSet("save", flag.ExitOnError)
@@ -26,8 +29,14 @@ func main() {
 	switch command {
 	case "load":
 		loadCommand.Parse(os.Args[2:])
-		if err := loadFromFile(*loadFilePtr); err != nil {
-			panic(err)
+		if *isSpreadsheetPtr {
+			if err := loadFromSpreadsheetJSON(*loadFilePtr); err != nil {
+				panic(err)
+			}
+		} else {
+			if err := loadFromJSON(*loadFilePtr); err != nil {
+				panic(err)
+			}
 		}
 	case "save":
 		saveCommand.Parse(os.Args[2:])
@@ -39,22 +48,55 @@ func main() {
 	}
 }
 
-func loadFromFile(filename string) error {
+func loadFromSpreadsheetJSON(filename string) error {
 	raw, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
 	}
-	var teas []spreadsheetTea
+	var steas []spreadsheetTea
+	json.Unmarshal(raw, &steas)
+
+	// fmt.Printf("%v\n", steas)
+
+	var teas []teadb.Tea
+	for _, stea := range steas {
+		teas = append(teas, convertSpreadsheetTeaToTea(stea))
+	}
+
+	return createTeas(teas)
+}
+
+func loadFromJSON(filename string) error {
+	raw, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	var teas []teadb.Tea
 	json.Unmarshal(raw, &teas)
 
-	for _, stea := range teas {
-		tea := convertSpreadsheetTeaToTea(stea)
-		// fmt.Printf("sTea (%s): %q, %d\n", stea.ID, stea.Name, len(stea.Entries))
-		if err = teadb.CreateTea(tea); err != nil {
+	return createTeas(teas)
+}
+
+func createTeas(teas []teadb.Tea) error {
+	// fmt.Printf("%v\n", teas)
+
+	for _, tea := range teas {
+		// fmt.Printf("Tea (%d): %q, %s, %d, %s, %s, %s, %s\n", tea.ID, tea.Name, tea.Country, len(tea.Entries), tea.Packaging, tea.Flush, tea.Purchasedate.Format("1/2/2006"), tea.Date.Format("1/2/2006"))
+		// fmt.Printf("Tea (%d): %q, %s\n", tea.ID, tea.Name, tea.Purchasedate.Format("1/2/2006"))
+		// fmt.Printf("Tea (%d): %s\n", tea.ID, tea.Name)
+		/*
+			for _, entry := range tea.Entries {
+				// fmt.Printf("  %s@%d: %s\n", entry.Date, entry.Time, entry.Datetime.Format("1/02/2006@1504"))
+				fmt.Printf("  %s, %v\n", entry.Datetime.Format("1/02/2006@1504"), entry.Fixins)
+			}
+		*/
+		if err := teadb.CreateTea(tea); err != nil {
 			fmt.Printf("Could not create tea %d: %v\n", tea.ID, err)
 		} else {
-			fmt.Printf("Tea (%d): %q, %d\n", tea.ID, tea.Name, len(tea.Entries))
+			fmt.Printf("Tea (%d): %s\n", tea.ID, tea.Name)
 		}
+		/*
+		 */
 	}
 
 	return nil
@@ -95,23 +137,54 @@ type spreadsheetTea struct {
 		Steeptemperature  string   `json:"steeptemperature"` // TODO: in F
 		Sessioninstance   string   `json:"sessioninstance"`
 		Sessionclosed     bool     `json:"sessionclosed"`
-		FixinsList        []string `json:"fixins_list"`
+		FixinsList        []int    `json:"fixins_list"`
 	} `json:"entries"`
 }
 
 func convertSpreadsheetTeaToTea(sTea spreadsheetTea) teadb.Tea {
+	teaPackagingTypes := []string{"Loose Leaf", "Bagged", "Tuo", "Beeng", "Brick", "Mushroom", "Square"}
+	teaFlushTypesDefault := []string{"Spring", "Summer", "Fall", "Winter"}
+	teaFlushTypesIndian := []string{"1st Flush", "2nd Flush", "Monsoon Flush", "Autumn Flush"}
+
+	teaFixins := []string{"Milk", "Cream", "Half & Half", "Sugar", "Brown Sugar", "Raw Sugar",
+		"Honey", "Vanilla Extract", "Vanilla Bean", "Maple Cream", "Maple Sugar", "Chai Goop", "Ice"}
+
 	var tea teadb.Tea
+	sTeaJSON, _ := json.Marshal(sTea)
+
+	var err error
 
 	tea.ID, _ = strconv.Atoi(sTea.ID)
 	tea.Name = sTea.Name
 	tea.Timestamp = sTea.Timestamp
-	tea.Date = sTea.Date
+	if dummyTime, err := time.Parse("1/2/2006", sTea.Date); err != nil {
+		fmt.Printf("ERROR: Could not create parse date: %s\n %s\n", err, sTeaJSON)
+	} else {
+		tea.Date = &dummyTime
+	}
 	tea.Type = sTea.Type
 	tea.Region = sTea.Region
 	tea.Year, _ = strconv.Atoi(sTea.Year)
-	tea.FlushIdx, _ = strconv.Atoi(sTea.FlushIdx)
+	if len(sTea.FlushIdx) > 0 {
+		flushIdx, err := strconv.Atoi(sTea.FlushIdx)
+		if err != nil {
+			fmt.Printf("ERROR: Could not process flush_idx: %s\n%s\n", err, sTeaJSON)
+		}
+		if "india" == strings.ToLower(sTea.Country) {
+			tea.Flush = teaFlushTypesIndian[flushIdx]
+		} else {
+			tea.Flush = teaFlushTypesDefault[flushIdx]
+		}
+	}
+
 	tea.Purchaselocation = sTea.Purchaselocation
-	tea.Purchasedate = sTea.Purchasedate
+	if len(sTea.Purchasedate) > 0 {
+		if dummyTime, err := time.Parse("1/2/2006", sTea.Purchasedate); err != nil {
+			fmt.Printf("ERROR: Could not create parse purchasedate: %s\n %s\n", err, sTeaJSON)
+		} else {
+			tea.Purchasedate = &dummyTime
+		}
+	}
 	tea.Purchaseprice, _ = strconv.Atoi(sTea.Purchaseprice)
 	tea.Comments = sTea.Comments
 	tea.Pictures = sTea.Pictures
@@ -122,19 +195,38 @@ func convertSpreadsheetTeaToTea(sTea spreadsheetTea) teadb.Tea {
 	tea.Size = sTea.Size
 	tea.Stocked = sTea.Stocked
 	tea.Aging = sTea.Aging
-	tea.PackagingIdx, _ = strconv.Atoi(sTea.PackagingIdx)
+	packagingIdx, err := strconv.Atoi(sTea.PackagingIdx)
+	if err != nil {
+		fmt.Printf("ERROR: Could not process packaging_idx: %d\n", packagingIdx)
+	}
+	tea.Packaging = teaPackagingTypes[packagingIdx]
 	tea.Sample = sTea.Sample
 
 	for _, sentry := range sTea.Entries {
+		sentryJSON, _ := json.Marshal(sentry)
 		var entry teadb.TeaEntry
 		entry.Comments = sentry.Comments
 		entry.Timestamp = sentry.Timestamp
-		entry.Date = sentry.Date
-		entry.Time, _ = strconv.Atoi(sentry.Time)
-		entry.Rating, _ = strconv.Atoi(sentry.Rating)
+
+		if dummyTime, err := time.Parse("1/2/2006@1504", fmt.Sprintf("%s@%s", sentry.Date, fmt.Sprintf("%04v", sentry.Time))); err != nil {
+			fmt.Printf("ERROR: Could not create parse purchasedate: %s\n %s\n", err, sTeaJSON)
+		} else {
+			entry.Datetime = &dummyTime
+		}
+
+		entry.Rating, err = strconv.Atoi(sentry.Rating)
+		if err != nil {
+			fmt.Printf("ERROR: Could not process entry Rating: %s\n", sentryJSON)
+		}
 		entry.Steeptime = sentry.Steeptime
-		entry.SteepingvesselIdx, _ = strconv.Atoi(sentry.SteepingvesselIdx)
-		entry.Steeptemperature, _ = strconv.Atoi(sentry.Steeptemperature)
+		entry.SteepingvesselIdx, err = strconv.Atoi(sentry.SteepingvesselIdx)
+		if err != nil {
+			fmt.Printf("ERROR: Could not process entry SteepingvesselIdx: %s\n", sentryJSON)
+		}
+		entry.Steeptemperature, err = strconv.Atoi(sentry.Steeptemperature)
+		if err != nil {
+			fmt.Printf("ERROR: Could not process entry Steeptemperature: %s\n", sentryJSON)
+		}
 		entry.Sessioninstance = sentry.Sessioninstance
 		entry.Sessionclosed = sentry.Sessionclosed
 
@@ -142,9 +234,8 @@ func convertSpreadsheetTeaToTea(sTea spreadsheetTea) teadb.Tea {
 			entry.Pictures = append(entry.Pictures, pic)
 		}
 
-		for _, fixinStr := range sentry.FixinsList {
-			fixin, _ := strconv.Atoi(fixinStr)
-			entry.FixinsList = append(entry.FixinsList, fixin)
+		for _, fixin := range sentry.FixinsList {
+			entry.Fixins = append(entry.Fixins, teaFixins[fixin])
 		}
 
 		tea.Entries = append(tea.Entries, entry)
@@ -158,6 +249,8 @@ func saveToFile(filename string) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("Saving %d teas\n", len(teas))
 
 	teasJSON, err := json.Marshal(teas)
 	if err != nil {
