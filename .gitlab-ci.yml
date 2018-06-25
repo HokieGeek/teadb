@@ -14,16 +14,20 @@ cache:
     - /go/bin
     - /go/src
 
+before_script:
+    - mkdir -p $WORKDIR
+    - cp -r . $WORKDIR
+    - cd $WORKDIR
+
       # .build-template: &build-template
 build:
   stage: build
-  before_script:
-    - mkdir -p $WORKDIR
-    - cp -r . $WORKDIR
     - apk add --update git
+    - pwd
   script:
-    - cd $WORKDIR && go get -d -v ./...
-    - cd $WORKDIR && go install -v ./...
+    - go get -d -v ./...
+    - go install -v ./...
+    - ls -l /go/bin
 
       # build-snapshot:
       #   <<: *build-template
@@ -45,7 +49,7 @@ build:
 unit-test:
   stage: test
   script:
-    - cd $WORKDIR && go test ./...
+    - go test -v -cover ./...
 
 ## Create container
 .build-docker-image: &build-docker-image
