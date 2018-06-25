@@ -7,8 +7,7 @@ stages:
     - deploy
 
 variables:
-    WORKDIR_BASE: /go/src/gitlab.com
-    WORKDIR: ${WORKDIR_BASE}/hokiegeek.net/teadb
+    WORKDIR: /go/src/gitlab.com/hokiegeek.net/teadb
 
 cache:
   paths:
@@ -19,8 +18,8 @@ cache:
 build:
   stage: build
   before_script:
-    - mkdir -p $WORKDIR_BASE
-    - mv /builds/* $WORKDIR_BASE
+    - mkdir -p $WORKDIR
+    - cp -r . $WORKDIR
     - apk add --update git
   script:
     - cd $WORKDIR && go get -d -v ./...
