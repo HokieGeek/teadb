@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"gitlab.com/hokiegeek.net/teadb"
 )
@@ -19,15 +20,20 @@ func main() {
 	fmt.Printf("Serving on port: %d\n", *portPtr)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/teas", getAllTeasHandler).Methods("GET")
-	r.HandleFunc("/tea/{id:[0-9]+}", teaHandler).Methods("GET", "POST", "PUT")
-	r.HandleFunc("/tea/{teaid:[0-9]+}/entry", entryHandler).Methods("GET", "POST", "PUT")
+	r.HandleFunc("/teas", getAllTeasHandler).Methods("GET", "OPTIONS")
+	r.HandleFunc("/tea/{id:[0-9]+}", teaHandler).Methods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+	r.HandleFunc("/tea/{teaid:[0-9]+}/entry", entryHandler).Methods("GET", "POST", "PUT", "DELETE", "OPTIONS")
 
-	http.ListenAndServe(fmt.Sprintf(":%d", *portPtr), r)
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
+
+	http.ListenAndServe(fmt.Sprintf(":%d", *portPtr), handlers.CORS(originsOk, headersOk, methodsOk)(r))
 }
 
 func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("/teas")
+
 	teas, err := teadb.GetAllTeas()
 	if err != nil {
 		log.Printf("ERROR: %s\n", err.Error())
@@ -37,6 +43,7 @@ func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
 
 func teaHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("/tea")
+
 	vars := mux.Vars(r)
 
 	id, err := strconv.Atoi(vars["id"])
@@ -77,8 +84,9 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func entryHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("tea entry")
 	vars := mux.Vars(r)
+
+	log.Printf("/tea/%s/entry\n", vars["teaid"])
 
 	teaid, err := strconv.Atoi(vars["teaid"])
 	if err != nil {
@@ -91,7 +99,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		// If entry id is not set
+		// If entry id is not set, do them all
 		postJSON(w, http.StatusOK, tea.Entries)
 	case http.MethodPost:
 		body, err := ioutil.ReadAll(r.Body)
@@ -105,6 +113,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 
 		var entry teadb.TeaEntry
 		if err := json.Unmarshal(body, &entry); err != nil {
+			log.Printf("shit: %s\n", body)
 			http.Error(w, "can't read entry", http.StatusUnprocessableEntity)
 		} else {
 			if err = teadb.CreateEntry(tea.ID, entry); err != nil {
@@ -139,10 +148,6 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 
 func postJSON(w http.ResponseWriter, httpStatus int, send interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Add("Access-Control-Allow-Methods", "PUT")
-	w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
 
 	w.WriteHeader(httpStatus)
 	if err := json.NewEncoder(w).Encode(send); err != nil {

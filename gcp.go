@@ -13,12 +13,12 @@ import (
 
 const kind = "tea"
 
-// TeaEntries encapsulates the data needed for a journal entry
+// TeaEntry encapsulates the data needed for a journal entry
 type TeaEntry struct {
 	Comments          string   `json:"comments"`
 	Timestamp         string   `json:"timestamp"`
 	Date              string   `json:"date"` // TODO
-	Time              string   `json:"time"` // TODO
+	Time              int      `json:"time"` // TODO
 	Rating            int      `json:"rating"`
 	Pictures          []string `json:"pictures"`
 	Steeptime         string   `json:"steeptime"`
@@ -29,8 +29,8 @@ type TeaEntry struct {
 	FixinsList        []int    `json:"fixins_list"`
 }
 
-func (t *TeaEntry) ID() string {
-	return fmt.Sprintf("%s@%s", t.Date, t.Time)
+func (t *TeaEntry) id() string {
+	return fmt.Sprintf("%s@%d", t.Date, t.Time)
 }
 
 // Tea encapsulates a specific tea and its journal entries
@@ -90,6 +90,7 @@ func UpdateTea(tea Tea) error {
 
 // CreateEntry creates a new entry on an existing tea
 func CreateEntry(id int, entry TeaEntry) error {
+	log.Printf("createEntry(%d): %v\n", id, entry)
 	tea, err := GetTeaByID(id)
 	if err != nil {
 		return err
@@ -111,7 +112,7 @@ func UpdateEntry(id int, entry TeaEntry) error {
 	// TODO: validate
 
 	for i, teaEntry := range tea.Entries {
-		if entry.ID() == teaEntry.ID() {
+		if entry.id() == teaEntry.id() {
 			tea.Entries[i] = entry
 			break
 		}

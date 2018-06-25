@@ -51,7 +51,7 @@ func loadFromFile(filename string) error {
 		tea := convertSpreadsheetTeaToTea(stea)
 		// fmt.Printf("sTea (%s): %q, %d\n", stea.ID, stea.Name, len(stea.Entries))
 		if err = teadb.CreateTea(tea); err != nil {
-			fmt.Printf("Could not create tea: %d\n", tea.ID)
+			fmt.Printf("Could not create tea %d: %v\n", tea.ID, err)
 		} else {
 			fmt.Printf("Tea (%d): %q, %d\n", tea.ID, tea.Name, len(tea.Entries))
 		}
@@ -130,7 +130,7 @@ func convertSpreadsheetTeaToTea(sTea spreadsheetTea) teadb.Tea {
 		entry.Comments = sentry.Comments
 		entry.Timestamp = sentry.Timestamp
 		entry.Date = sentry.Date
-		entry.Time = sentry.Time
+		entry.Time, _ = strconv.Atoi(sentry.Time)
 		entry.Rating, _ = strconv.Atoi(sentry.Rating)
 		entry.Steeptime = sentry.Steeptime
 		entry.SteepingvesselIdx, _ = strconv.Atoi(sentry.SteepingvesselIdx)
