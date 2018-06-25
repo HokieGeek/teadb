@@ -17,28 +17,29 @@ cache:
 .build-template: &build-template
   stage: build
   before_script:
+    - pwd
     - apk add --update git
     - go get -d -v ./...
   script:
     - go install -v ./...
 
-build-release:
+build-snapshot:
   <<: *build-template
-  only:
+  except:
     - tags
+    - branches
 
-  # build-snapshot:
-  #   <<: *build-template
-  #   except:
-  #     - tags
-  #     - branches
-  # 
   # build-branch:
   #   <<: *build-template
   #   variables:
   #     version_suffix: $CI_COMMIT_REF_NAME
   #   only:
   #     - branches
+
+build-release:
+  <<: *build-template
+  only:
+    - tags
 
 unit-test:
   stage: test
