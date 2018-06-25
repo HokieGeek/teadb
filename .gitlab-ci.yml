@@ -13,37 +13,21 @@ cache:
   paths:
     - teadbd/teadbd
 
-before_script:
+.prep-go-build: &prep-go-build
+  before_script:
     - mkdir -p /go/src/gitlab.com/hokiegeek.net/teadb
     - cp -r . /go/src/gitlab.com/hokiegeek.net/teadb
     - apk add --update git
     - go get -d -v ./...
 
-      # .build-template: &build-template
 build:
+  <<: *prep-go-build
   stage: build
   script:
     - cd teadbd && go build -v ./...
-    - ls -lR
-
-      # build-snapshot:
-      #   <<: *build-template
-      #   only:
-      #     - master
-      #   except:
-      #     - tags
-      # 
-      # build-branch:
-      #   <<: *build-template
-      #   only:
-      #     - branches
-      # 
-      # build-release:
-      #   <<: *build-template
-      #   only:
-      #     - tags
 
 unit-test:
+  <<: *prep-go-build
   stage: test
   script:
     - go test -v -cover ./...
