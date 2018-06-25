@@ -6,24 +6,26 @@ stages:
     - release
     - deploy
 
+variables:
+    CI_PROJECT_DIR: /go/src/gitlab.com/hokiegeek.net/teadb
+
 cache:
   paths:
-    - /go
+    - /go/bin
+    - /go/src
 
 .build-template: &build-template
   stage: build
-  variables:
-      WORKDIR: /go/src/gitlab.com/hokiegeek.net/teadb
   before_script:
     - apk add --update git
+    - go get -d -v ./...
   script:
-    - mkdir -p $WORKDIR
-    - cp -r . $WORKDIR
-    - cd $WORKDIR && go get -d -v ./...
-    - cd $WORKDIR && go install -v ./...
+    - go install -v ./...
 
 build-release:
   <<: *build-template
+  only:
+    - tags
 
   # build-snapshot:
   #   <<: *build-template
@@ -37,11 +39,6 @@ build-release:
   #     version_suffix: $CI_COMMIT_REF_NAME
   #   only:
   #     - branches
-  # 
-  # build-release:
-  #   <<: *build-template
-  #   only:
-  #     - tags
 
 unit-test:
   stage: test
