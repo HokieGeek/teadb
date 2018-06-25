@@ -14,30 +14,33 @@ cache:
     - /go/bin
     - /go/src
 
-.build-template: &build-template
+      # .build-template: &build-template
+build:
   stage: build
   before_script:
     - pwd
     - apk add --update git
-    - go get -d -v ./...
   script:
+    - pwd
+    - go get -d -v ./...
     - go install -v ./...
 
-build-snapshot:
-  <<: *build-template
-  except:
-    - tags
-    - branches
-
-build-branch:
-  <<: *build-template
-  only:
-    - branches
-
-build-release:
-  <<: *build-template
-  only:
-    - tags
+      # build-snapshot:
+      #   <<: *build-template
+      #   only:
+      #     - master
+      #   except:
+      #     - tags
+      # 
+      # build-branch:
+      #   <<: *build-template
+      #   only:
+      #     - branches
+      # 
+      # build-release:
+      #   <<: *build-template
+      #   only:
+      #     - tags
 
 unit-test:
   stage: test
