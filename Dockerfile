@@ -21,4 +21,4 @@ ENV GOOGLE_APPLICATION_CREDENTIALS=/conf/hgnet-tea.json
 COPY --from=0 /go/bin/teadbd .
 # COPY teadbd/teadbd .
 
-ENTRYPOINT ["./teadb"]
+ENTRYPOINT ["./teadbd"]
