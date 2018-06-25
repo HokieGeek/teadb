@@ -22,10 +22,9 @@ before_script:
       # .build-template: &build-template
 build:
   stage: build
-  before_script:
-    - apk add --update git
-    - pwd
   script:
+    - pwd
+    - apk add --update git
     - go get -d -v ./...
     - go install -v ./...
     - ls -l /go/bin
