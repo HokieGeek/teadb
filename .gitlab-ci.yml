@@ -29,12 +29,10 @@ build-snapshot:
     - tags
     - branches
 
-  # build-branch:
-  #   <<: *build-template
-  #   variables:
-  #     version_suffix: $CI_COMMIT_REF_NAME
-  #   only:
-  #     - branches
+build-branch:
+  <<: *build-template
+  only:
+    - branches
 
 build-release:
   <<: *build-template
