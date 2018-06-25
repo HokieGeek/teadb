@@ -22,6 +22,7 @@ before_script:
       # .build-template: &build-template
 build:
   stage: build
+  before_script:
     - apk add --update git
     - pwd
   script:
