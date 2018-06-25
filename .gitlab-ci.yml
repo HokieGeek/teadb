@@ -11,8 +11,7 @@ variables:
 
 cache:
   paths:
-    - /go/bin
-    - /go/src
+    - /go/**/*
 
 before_script:
     - mkdir -p $WORKDIR
