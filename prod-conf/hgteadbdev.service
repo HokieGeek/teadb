@@ -5,11 +5,11 @@ Requires=docker.service
 
 [Service]
 TimeoutStartSec=0
-ExecStartPre=-/usr/bin/docker kill site-teadb-dev
-ExecStartPre=-/usr/bin/docker rm site-teadb-dev
+ExecStartPre=-/usr/bin/docker kill teadb-dev
+ExecStartPre=-/usr/bin/docker rm teadb-dev
 ExecStartPre=/usr/bin/docker pull registry.gitlab.com/hokiegeek.net/teadb:SNAPSHOT
-ExecStart=/usr/bin/docker run --name site-teadb-dev --network hokiegeek.net --volume /etc/hgteadb:/conf registry.gitlab.com/hokiegeek.net/teadb:SNAPSHOT
-ExecStop=/usr/bin/docker stop site-teadb-dev
+ExecStart=/usr/bin/docker run --name teadb-dev --network hokiegeek.net --volume /etc/hgteadb:/conf registry.gitlab.com/hokiegeek.net/teadb:SNAPSHOT
+ExecStop=/usr/bin/docker stop teadb-dev
 Restart=always
 RestartSec=3
 
