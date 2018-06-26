@@ -76,9 +76,11 @@ create-container:
 add-proxy-server:
   <<: *server-connector-template
   stage: deploy
+  variables:
+      conf_file: proxy-teadb.conf
   script:
-    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/proxy-home.conf $ADMIN_USER@hokiegeek.net:/tmp
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo mv /tmp/proxy-teadb.conf /etc/hgproxy"
+    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${conf_file} $ADMIN_USER@hokiegeek.net:/tmp
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo mv /tmp/${conf_file} /etc/hgproxy"
     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo systemctl restart hgproxy.service hgproxydev.service"
 
 ## Service restarter
