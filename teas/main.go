@@ -60,6 +60,7 @@ func loadFromSpreadsheetJSON(filename string) error {
 
 	var teas []teadb.Tea
 	for _, stea := range steas {
+		fmt.Printf("sTea (%s): %s\n", stea.ID, stea.Name)
 		teas = append(teas, convertSpreadsheetTeaToTea(stea))
 	}
 
@@ -128,8 +129,7 @@ type spreadsheetTea struct {
 	Entries          []struct {
 		Comments          string   `json:"comments"`
 		Timestamp         string   `json:"timestamp"`
-		Date              string   `json:"date"` // TODO
-		Time              string   `json:"time"` // TODO
+		Datetime          string   `json:"datetime"`
 		Rating            string   `json:"rating"`
 		Pictures          []string `json:"pictures"`
 		Steeptime         string   `json:"steeptime"`
@@ -158,7 +158,7 @@ func convertSpreadsheetTeaToTea(sTea spreadsheetTea) teadb.Tea {
 	tea.Name = sTea.Name
 	tea.Timestamp = sTea.Timestamp
 	if dummyTime, err := time.Parse("1/2/2006", sTea.Date); err != nil {
-		fmt.Printf("ERROR: Could not create parse date: %s\n %s\n", err, sTeaJSON)
+		fmt.Printf("ERROR: Could not parse date: %s\n %s\n", err, sTeaJSON)
 	} else {
 		tea.Date = &dummyTime
 	}
@@ -180,7 +180,7 @@ func convertSpreadsheetTeaToTea(sTea spreadsheetTea) teadb.Tea {
 	tea.Purchaselocation = sTea.Purchaselocation
 	if len(sTea.Purchasedate) > 0 {
 		if dummyTime, err := time.Parse("1/2/2006", sTea.Purchasedate); err != nil {
-			fmt.Printf("ERROR: Could not create parse purchasedate: %s\n %s\n", err, sTeaJSON)
+			fmt.Printf("ERROR: Could not parse purchasedate: %s\n %s\n", err, sTeaJSON)
 		} else {
 			tea.Purchasedate = &dummyTime
 		}
@@ -208,8 +208,9 @@ func convertSpreadsheetTeaToTea(sTea spreadsheetTea) teadb.Tea {
 		entry.Comments = sentry.Comments
 		entry.Timestamp = sentry.Timestamp
 
-		if dummyTime, err := time.Parse("1/2/2006@1504", fmt.Sprintf("%s@%s", sentry.Date, fmt.Sprintf("%04v", sentry.Time))); err != nil {
-			fmt.Printf("ERROR: Could not create parse purchasedate: %s\n %s\n", err, sTeaJSON)
+		// if dummyTime, err := time.Parse("2006-01-02T15:04:00.000Z", sentry.Datetime); err != nil {
+		if dummyTime, err := time.Parse(time.RFC3339Nano, sentry.Datetime); err != nil {
+			fmt.Printf("ERROR: Could not parse Datetime: %s\n %s\n", err, sTeaJSON)
 		} else {
 			entry.Datetime = &dummyTime
 		}
