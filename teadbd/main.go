@@ -31,8 +31,20 @@ func main() {
 	http.ListenAndServe(fmt.Sprintf(":%d", *portPtr), handlers.CORS(originsOk, headersOk, methodsOk)(r))
 }
 
+func cors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "HEAD, POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Requested-With")
+}
+
 func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("/teas")
+	log.Printf("/teas [%s]\n", r.RemoteAddr)
+
+	cors(&w)
+
+	if r.Method == http.MethodOptions {
+		return
+	}
 
 	teas, err := teadb.GetAllTeas()
 	if err != nil {
@@ -42,9 +54,15 @@ func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func teaHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("/tea")
-
 	vars := mux.Vars(r)
+
+	log.Printf("/tea/%s [%s]\n", vars["id"], r.RemoteAddr)
+
+	cors(&w)
+
+	if r.Method == http.MethodOptions {
+		return
+	}
 
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -86,7 +104,13 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 func entryHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	log.Printf("/tea/%s/entry\n", vars["teaid"])
+	log.Printf("/tea/%s/entry [%s]\n", vars["teaid"], r.RemoteAddr)
+
+	cors(&w)
+
+	if r.Method == http.MethodOptions {
+		return
+	}
 
 	teaid, err := strconv.Atoi(vars["teaid"])
 	if err != nil {
@@ -148,6 +172,10 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 
 func postJSON(w http.ResponseWriter, httpStatus int, send interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Access-Control-Allow-Methods", "PUT")
+	w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
 
 	w.WriteHeader(httpStatus)
 	if err := json.NewEncoder(w).Encode(send); err != nil {
