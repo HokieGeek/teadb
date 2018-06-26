@@ -73,6 +73,14 @@ create-container:
     - echo $HOST_SSH_KEY | sed -e 's/ /\n/g' | sed -r -e '1,4{:a;N;4!ba;s/\n/ /g}' | sed -r -e '/^-{5}END/,${:z;N;$!bz;s/\n/ /g}' > /tmp/sshkey
     - chmod 0600 /tmp/sshkey
 
+add-proxy-server:
+  <<: *server-connector-template
+  stage: deploy
+  script:
+    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/proxy-home.conf $ADMIN_USER@hokiegeek.net:/tmp
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo mv /tmp/proxy-teadb.conf /etc/hgproxy"
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo systemctl restart hgproxy.service hgproxydev.service"
+
 ## Service restarter
 .service-restarter: &service-restarter
   <<: *server-connector-template

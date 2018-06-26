@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	portPtr := flag.Int("port", 8888, "Specify the port to use")
+	portPtr := flag.Int("port", 80, "Specify the port to use")
 	flag.Parse()
 	fmt.Printf("Serving on port: %d\n", *portPtr)
 

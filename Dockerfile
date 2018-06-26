@@ -14,6 +14,9 @@ RUN go test -v ./...
 ### Package it up
 FROM alpine
 
+EXPOSE 80
+EXPOSE 443
+
 RUN apk add --no-cache --update ca-certificates
 
 ENV GOOGLE_APPLICATION_CREDENTIALS=/conf/hgnet-tea.json
