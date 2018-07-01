@@ -126,6 +126,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 		// If entry id is not set, do them all
 		postJSON(w, http.StatusOK, tea.Entries)
 	case http.MethodPost:
+		defer r.Body.Close()
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Printf("Error reading body: %v", err)
@@ -148,6 +149,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case http.MethodPut:
 		// Update existing tea entry
+		defer r.Body.Close()
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Printf("Error reading body: %v", err)
