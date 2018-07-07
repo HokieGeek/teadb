@@ -185,7 +185,14 @@ func convertSpreadsheetTeaToTea(sTea spreadsheetTea) teadb.Tea {
 			tea.Purchasedate = &dummyTime
 		}
 	}
-	tea.Purchaseprice, _ = strconv.Atoi(sTea.Purchaseprice)
+	// tea.Purchaseprice, _ = strconv.Atoi(sTea.Purchaseprice)
+	if len(sTea.Purchaseprice) > 0 {
+		dummy, err := strconv.ParseFloat(sTea.Purchaseprice, 32)
+		if err != nil {
+			fmt.Printf("ERROR: Could not parse purchaseprice: %s\n %s\n", err, sTeaJSON)
+		}
+		tea.Purchaseprice = float32(dummy)
+	}
 	tea.Comments = sTea.Comments
 	tea.Pictures = sTea.Pictures
 	tea.Country = sTea.Country
@@ -251,7 +258,12 @@ func saveToFile(filename string) error {
 		return err
 	}
 
-	fmt.Printf("Saving %d teas\n", len(teas))
+	numEntries := 0
+	for _, t := range teas {
+		numEntries += len(t.Entries)
+	}
+
+	fmt.Printf("Retrieved %d teas and %d entries\n", len(teas), numEntries)
 
 	teasJSON, err := json.Marshal(teas)
 	if err != nil {

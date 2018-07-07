@@ -41,7 +41,7 @@ type Tea struct {
 	Flush            string     `json:"flush"`
 	Purchaselocation string     `json:"purchaselocation"`
 	Purchasedate     *time.Time `json:"purchasedate"`
-	Purchaseprice    int        `json:"purchaseprice"`
+	Purchaseprice    float32    `json:"purchaseprice"`
 	Comments         string     `json:"comments"`
 	Pictures         []string   `json:"pictures"`
 	Country          string     `json:"country"`
