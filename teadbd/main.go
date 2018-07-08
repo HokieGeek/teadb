@@ -194,6 +194,7 @@ func readEntry(w http.ResponseWriter, r *http.Request) (entry teadb.TeaEntry, er
 	// TODO: need some way to validate this
 
 	if err = json.Unmarshal(body, &entry); err != nil {
+		log.Printf("Could not unmarshal: %s\n", err)
 		http.Error(w, "can't read entry", http.StatusUnprocessableEntity)
 	}
 

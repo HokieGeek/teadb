@@ -84,7 +84,6 @@ func UpdateTea(tea Tea) error {
 
 // CreateEntry creates a new entry on an existing tea
 func CreateEntry(id int, entry TeaEntry) error {
-	log.Printf("createEntry(%d): %v\n", id, entry)
 	tea, err := GetTeaByID(id)
 	if err != nil {
 		return err
