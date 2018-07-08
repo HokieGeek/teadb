@@ -21,7 +21,7 @@ type TeaEntry struct {
 	Datetime          *time.Time `json:"datetime"`
 	Rating            int        `json:"rating"`
 	Pictures          []string   `json:"pictures"`
-	Steeptime         string     `json:"steeptime"`
+	Steeptime         int        `json:"steeptime"`
 	SteepingvesselIdx int        `json:"steepingvessel_idx"`
 	Steeptemperature  int        `json:"steeptemperature"` // TODO: in F
 	Sessioninstance   string     `json:"sessioninstance"`
@@ -48,7 +48,7 @@ type Tea struct {
 	Leafgrade        string     `json:"leafgrade"`
 	Blendedteas      string     `json:"blendedteas"`
 	Blendratio       string     `json:"blendratio"`
-	Size             string     `json:"size"`
+	Size             int        `json:"size"`
 	Stocked          bool       `json:"stocked"`
 	Aging            bool       `json:"aging"`
 	Packaging        string     `json:"packaging"`
