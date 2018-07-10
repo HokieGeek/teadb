@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -51,11 +53,7 @@ func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("ERROR: %s\n", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
-		w.WriteHeader(http.StatusOK)
-
-		if r.Method == http.MethodGet {
-			postJSON(w, teas)
-		}
+		postJSON(w, r, teas)
 	}
 }
 
@@ -81,10 +79,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 			} else {
-				w.WriteHeader(http.StatusOK)
-				if r.Method == http.MethodGet {
-					postJSON(w, tea)
-				}
+				postJSON(w, r, tea)
 			}
 		case http.MethodPost:
 			// Create new TEA
@@ -154,11 +149,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodHead:
 	case http.MethodGet:
-		// If entry id is not set, do them all
-		w.WriteHeader(http.StatusOK)
-		if r.Method == http.MethodGet {
-			postJSON(w, tea.Entries)
-		}
+		postJSON(w, r, tea)
 	case http.MethodPost:
 		if entry, err := readEntry(w, r); err == nil {
 			if err = teadb.CreateEntry(tea.ID, entry); err != nil {
@@ -171,7 +162,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 		// Update existing tea entry
 		if entry, err := readEntry(w, r); err == nil {
 			if err = teadb.UpdateEntry(tea.ID, entry); err != nil {
-				http.Error(w, "error updating entry entry", http.StatusInternalServerError)
+				http.Error(w, "error updating entry", http.StatusInternalServerError)
 			} else {
 				w.WriteHeader(http.StatusOK)
 			}
@@ -179,21 +170,37 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postJSON(w http.ResponseWriter, send interface{}) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+func postJSON(w http.ResponseWriter, r *http.Request, payload interface{}) {
+	if JSON, err := json.Marshal(payload); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		requestedSum := r.Header.Get("If-None-Match")
+		sum := checksum(JSON)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Add("Access-Control-Allow-Methods", "PUT")
-	w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
+		if requestedSum == sum {
+			w.WriteHeader(http.StatusNotModified)
+		} else {
+			w.Header().Set("ETag", sum)
+			if r.Method == http.MethodGet {
+				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-	// w.WriteHeader(httpStatus)
-	if err := json.NewEncoder(w).Encode(send); err != nil {
-		panic(err)
+				if err = json.NewEncoder(w).Encode(payload); err != nil {
+					panic(err)
+				}
+			} else {
+				w.Header().Add("Content-Length", "0")
+				w.WriteHeader(http.StatusOK)
+			}
+		}
 	}
 }
 
+func checksum(body []byte) string {
+	hash := md5.Sum(body)
+	return hex.EncodeToString(hash[:])
+}
+
 func readEntry(w http.ResponseWriter, r *http.Request) (entry teadb.TeaEntry, err error) {
-	// Update existing tea entry
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -213,7 +220,6 @@ func readEntry(w http.ResponseWriter, r *http.Request) (entry teadb.TeaEntry, er
 }
 
 func readTea(w http.ResponseWriter, r *http.Request) (tea teadb.Tea, err error) {
-	// Update existing tea entry
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
