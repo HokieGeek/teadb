@@ -185,7 +185,8 @@ func postJSON(w http.ResponseWriter, r *http.Request, payload interface{}) {
 				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 				if err = json.NewEncoder(w).Encode(payload); err != nil {
-					panic(err)
+					log.Printf("Error sending payload: %v", err)
+					http.Error(w, "error sending payload", http.StatusInternalServerError)
 				}
 			} else {
 				w.Header().Add("Content-Length", "0")
