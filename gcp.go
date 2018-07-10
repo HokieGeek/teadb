@@ -82,6 +82,12 @@ func UpdateTea(tea Tea) error {
 	return saveTea(tea)
 }
 
+// DeleteTea deletes an existing tea
+func DeleteTea(teaID int) error {
+	// TODO: validate?
+	return removeTea(teaID)
+}
+
 // CreateEntry creates a new entry on an existing tea
 func CreateEntry(id int, entry TeaEntry) error {
 	tea, err := GetTeaByID(id)
@@ -176,6 +182,25 @@ func saveTea(tea Tea) error {
 	// Saves the new entity.
 	if _, err := client.Put(ctx, key, &tea); err != nil {
 		return fmt.Errorf("Failed to save tea: %v", err)
+	}
+
+	// fmt.Printf("Saved %v\n", key)
+	return nil
+}
+
+func removeTea(teaID int) error {
+	ctx := context.Background()
+	client, err := getClient(ctx)
+	if err != nil {
+		return fmt.Errorf("Failed to create client: %v", err)
+	}
+
+	// Create the Key instance.
+	key := datastore.NameKey(kindTea, strconv.Itoa(teaID), nil)
+
+	// Saves the new entity.
+	if err := client.Delete(ctx, key); err != nil {
+		return fmt.Errorf("Failed to remove tea: %v", err)
 	}
 
 	// fmt.Printf("Saved %v\n", key)

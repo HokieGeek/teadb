@@ -33,6 +33,10 @@ func main() {
 		if err := saveToFile(*saveFilePtr); err != nil {
 			panic(err)
 		}
+	case "purge":
+		if err := purge(); err != nil {
+			panic(err)
+		}
 	default:
 		log.Fatalf("Unrecognized command: %s\n", command)
 	}
@@ -80,4 +84,21 @@ func saveToFile(filename string) error {
 	}
 
 	return ioutil.WriteFile(filename, teasJSON, 0644)
+}
+
+func purge() error {
+	teas, err := teadb.GetAllTeas()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Purging %d teas\n", len(teas))
+
+	for _, t := range teas {
+		if err := teadb.DeleteTea(t.ID); err != nil {
+			panic(err)
+		}
+	}
+
+	return nil
 }

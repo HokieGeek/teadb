@@ -22,7 +22,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/teas", getAllTeasHandler).Methods("HEAD", "GET", "OPTIONS")
 	r.HandleFunc("/tea/{id:[0-9]+}", teaHandler).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
-	r.HandleFunc("/tea/{teaid:[0-9]+}/entry", entryHandler).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
+	r.HandleFunc("/tea/{teaid:[0-9]+}/entry", entryHandler).Methods("HEAD", "GET", "POST", "PUT", "OPTIONS")
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
@@ -112,6 +112,17 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 					} else {
 						w.WriteHeader(http.StatusOK)
 					}
+				}
+			}
+		case http.MethodDelete:
+			// Delete existing TEA
+			if _, err := teadb.GetTeaByID(id); err != nil {
+				w.WriteHeader(http.StatusNotFound)
+			} else {
+				if err = teadb.DeleteTea(id); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+				} else {
+					w.WriteHeader(http.StatusOK)
 				}
 			}
 		}
