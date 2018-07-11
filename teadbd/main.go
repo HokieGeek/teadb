@@ -21,10 +21,27 @@ func main() {
 	flag.Parse()
 	fmt.Printf("Serving on port: %d\n", *portPtr)
 
+	db, err := teadb.New()
+	if err != nil {
+		panic(err)
+	}
+
 	r := mux.NewRouter()
-	r.HandleFunc("/teas", getAllTeasHandler).Methods("HEAD", "GET", "OPTIONS")
-	r.HandleFunc("/tea/{id:[0-9]+}", teaHandler).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
-	r.HandleFunc("/tea/{teaid:[0-9]+}/entry", entryHandler).Methods("HEAD", "GET", "POST", "PUT", "OPTIONS")
+
+	r.HandleFunc("/teas",
+		func(w http.ResponseWriter, r *http.Request) {
+			getAllTeasHandler(w, r, db)
+		}).Methods("HEAD", "GET", "OPTIONS")
+
+	r.HandleFunc("/tea/{id:[0-9]+}",
+		func(w http.ResponseWriter, r *http.Request) {
+			teaHandler(w, r, db)
+		}).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
+
+	r.HandleFunc("/tea/{teaid:[0-9]+}/entry",
+		func(w http.ResponseWriter, r *http.Request) {
+			entryHandler(w, r, db)
+		}).Methods("HEAD", "GET", "POST", "PUT", "OPTIONS")
 
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "If-None-Match"})
@@ -34,14 +51,14 @@ func main() {
 	http.ListenAndServe(fmt.Sprintf(":%d", *portPtr), handlers.CORS(originsOk, headersOk, methodsOk, exposedOk)(r))
 }
 
-func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
+func getAllTeasHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 	log.Printf("%s /teas [%s]\n", r.Method, r.RemoteAddr)
 
 	if r.Method == http.MethodOptions {
 		return
 	}
 
-	teas, err := teadb.GetAllTeas()
+	teas, err := db.GetAllTeas()
 	if err != nil {
 		log.Printf("ERROR: %s\n", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -50,7 +67,7 @@ func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func teaHandler(w http.ResponseWriter, r *http.Request) {
+func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 	vars := mux.Vars(r)
 
 	log.Printf("%s /tea/%s [%s]\n", r.Method, vars["id"], r.RemoteAddr)
@@ -66,7 +83,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodHead:
 		case http.MethodGet:
-			tea, err := teadb.GetTeaByID(id)
+			tea, err := db.GetTeaByID(id)
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 			} else {
@@ -74,12 +91,12 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		case http.MethodPost:
 			// Create new TEA
-			_, err := teadb.GetTeaByID(id)
+			_, err := db.GetTeaByID(id)
 			if err == nil {
 				w.WriteHeader(http.StatusConflict)
 			} else {
 				if tea, err := readTea(w, r); err == nil {
-					if err = teadb.CreateTea(tea); err != nil {
+					if err = db.CreateTea(tea); err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
 					} else {
 						w.WriteHeader(http.StatusCreated)
@@ -88,12 +105,12 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		case http.MethodPut:
 			// Update existing TEA
-			_, err := teadb.GetTeaByID(id)
+			_, err := db.GetTeaByID(id)
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 			} else {
 				if tea, err := readTea(w, r); err == nil {
-					if err = teadb.UpdateTea(tea); err != nil {
+					if err = db.UpdateTea(tea); err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
 					} else {
 						w.WriteHeader(http.StatusOK)
@@ -102,10 +119,10 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		case http.MethodDelete:
 			// Delete existing TEA
-			if _, err := teadb.GetTeaByID(id); err != nil {
+			if _, err := db.GetTeaByID(id); err != nil {
 				w.WriteHeader(http.StatusNotFound)
 			} else {
-				if err = teadb.DeleteTea(id); err != nil {
+				if err = db.DeleteTea(id); err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
 					w.WriteHeader(http.StatusOK)
@@ -115,7 +132,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func entryHandler(w http.ResponseWriter, r *http.Request) {
+func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 	vars := mux.Vars(r)
 
 	log.Printf("%s /tea/%s/entry [%s]\n", r.Method, vars["teaid"], r.RemoteAddr)
@@ -129,7 +146,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	tea, err := teadb.GetTeaByID(teaid)
+	tea, err := db.GetTeaByID(teaid)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -141,7 +158,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 		postJSON(w, r, tea)
 	case http.MethodPost:
 		if entry, err := readEntry(w, r); err == nil {
-			if err = teadb.CreateEntry(tea.ID, entry); err != nil {
+			if err = db.CreateEntry(tea.ID, entry); err != nil {
 				http.Error(w, "error creating new entry", http.StatusInternalServerError)
 			} else {
 				w.WriteHeader(http.StatusCreated)
@@ -150,7 +167,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		// Update existing tea entry
 		if entry, err := readEntry(w, r); err == nil {
-			if err = teadb.UpdateEntry(tea.ID, entry); err != nil {
+			if err = db.UpdateEntry(tea.ID, entry); err != nil {
 				http.Error(w, "error updating entry", http.StatusInternalServerError)
 			} else {
 				w.WriteHeader(http.StatusOK)

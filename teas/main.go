@@ -22,19 +22,24 @@ func main() {
 
 	command := os.Args[1]
 
+	db, err := teadb.New()
+	if err != nil {
+		panic(err)
+	}
+
 	switch command {
 	case "load":
 		loadCommand.Parse(os.Args[2:])
-		if err := loadFromJSON(*loadFilePtr); err != nil {
+		if err := loadFromJSON(*loadFilePtr, db); err != nil {
 			panic(err)
 		}
 	case "save":
 		saveCommand.Parse(os.Args[2:])
-		if err := saveToFile(*saveFilePtr); err != nil {
+		if err := saveToFile(*saveFilePtr, db); err != nil {
 			panic(err)
 		}
 	case "purge":
-		if err := purge(); err != nil {
+		if err := purge(db); err != nil {
 			panic(err)
 		}
 	default:
@@ -42,7 +47,7 @@ func main() {
 	}
 }
 
-func loadFromJSON(filename string) error {
+func loadFromJSON(filename string, db *teadb.GcpClient) error {
 	raw, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -50,12 +55,12 @@ func loadFromJSON(filename string) error {
 	var teas []teadb.Tea
 	json.Unmarshal(raw, &teas)
 
-	return createTeas(teas)
+	return createTeas(teas, db)
 }
 
-func createTeas(teas []teadb.Tea) error {
+func createTeas(teas []teadb.Tea, db *teadb.GcpClient) error {
 	for _, tea := range teas {
-		if err := teadb.CreateTea(tea); err != nil {
+		if err := db.CreateTea(tea); err != nil {
 			fmt.Printf("Could not create tea %d: %v\n", tea.ID, err)
 		} else {
 			fmt.Printf("Tea (%d): %s\n", tea.ID, tea.Name)
@@ -65,8 +70,8 @@ func createTeas(teas []teadb.Tea) error {
 	return nil
 }
 
-func saveToFile(filename string) error {
-	teas, err := teadb.GetAllTeas()
+func saveToFile(filename string, db *teadb.GcpClient) error {
+	teas, err := db.GetAllTeas()
 	if err != nil {
 		return err
 	}
@@ -86,8 +91,8 @@ func saveToFile(filename string) error {
 	return ioutil.WriteFile(filename, teasJSON, 0644)
 }
 
-func purge() error {
-	teas, err := teadb.GetAllTeas()
+func purge(db *teadb.GcpClient) error {
+	teas, err := db.GetAllTeas()
 	if err != nil {
 		return err
 	}
@@ -95,7 +100,7 @@ func purge() error {
 	fmt.Printf("Purging %d teas\n", len(teas))
 
 	for _, t := range teas {
-		if err := teadb.DeleteTea(t.ID); err != nil {
+		if err := db.DeleteTea(t.ID); err != nil {
 			panic(err)
 		}
 	}

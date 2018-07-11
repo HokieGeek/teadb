@@ -2,7 +2,6 @@ package teadb
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 )
 
 const kindTea = "tea"
+const projectID = "hgnet-tea"
 
 // TeaEntry encapsulates the data needed for a journal entry
 type TeaEntry struct {
@@ -56,41 +56,33 @@ type Tea struct {
 	Entries          []TeaEntry `json:"entries"`
 }
 
-func getClient(ctx context.Context) (*datastore.Client, error) {
-	// Set your Google Butt Platform project ID.
-	projectID := "hgnet-tea"
-
-	// Creates a client.
-	client, err := datastore.NewClient(ctx, projectID)
-	if err != nil {
-		return nil, err
-		// log.Fatalf("Failed to create client: %v", err)
-	}
-
-	return client, nil
+// GcpClient is the client struct
+type GcpClient struct {
+	ctx    context.Context
+	client *datastore.Client
 }
 
 // CreateTea creates a new tea entity
-func CreateTea(tea Tea) error {
+func (c *GcpClient) CreateTea(tea Tea) error {
 	// TODO: validate?
-	return saveTea(tea)
+	return c.saveTea(tea)
 }
 
 // UpdateTea updates a new tea entity
-func UpdateTea(tea Tea) error {
+func (c *GcpClient) UpdateTea(tea Tea) error {
 	// TODO: validate?
-	return saveTea(tea)
+	return c.saveTea(tea)
 }
 
 // DeleteTea deletes an existing tea
-func DeleteTea(teaID int) error {
+func (c *GcpClient) DeleteTea(teaID int) error {
 	// TODO: validate?
-	return removeTea(teaID)
+	return c.removeTea(teaID)
 }
 
 // CreateEntry creates a new entry on an existing tea
-func CreateEntry(id int, entry TeaEntry) error {
-	tea, err := GetTeaByID(id)
+func (c *GcpClient) CreateEntry(id int, entry TeaEntry) error {
+	tea, err := c.GetTeaByID(id)
 	if err != nil {
 		return err
 	}
@@ -98,12 +90,12 @@ func CreateEntry(id int, entry TeaEntry) error {
 	// TODO: validate
 	tea.Entries = append(tea.Entries, entry)
 
-	return saveTea(tea)
+	return c.saveTea(tea)
 }
 
 // UpdateEntry updates an existing entry
-func UpdateEntry(id int, entry TeaEntry) error {
-	tea, err := GetTeaByID(id)
+func (c *GcpClient) UpdateEntry(id int, entry TeaEntry) error {
+	tea, err := c.GetTeaByID(id)
 	if err != nil {
 		return err
 	}
@@ -117,23 +109,15 @@ func UpdateEntry(id int, entry TeaEntry) error {
 		}
 	}
 
-	return saveTea(tea)
+	return c.saveTea(tea)
 }
 
 // GetAllTeas retrieves every tea entity
-func GetAllTeas() ([]Tea, error) {
-	ctx := context.Background()
-	client, err := getClient(ctx)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
-
+func (c *GcpClient) GetAllTeas() ([]Tea, error) {
 	query := datastore.NewQuery(kindTea)
-
-	it := client.Run(ctx, query)
+	it := c.client.Run(c.ctx, query)
 
 	var teas []Tea
-
 	for {
 		var tea Tea
 		_, err := it.Next(&tea)
@@ -152,35 +136,23 @@ func GetAllTeas() ([]Tea, error) {
 }
 
 // GetTeaByID returns a single tea instance based on its ID
-func GetTeaByID(id int) (Tea, error) {
-	ctx := context.Background()
-	client, err := getClient(ctx)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
-
+func (c *GcpClient) GetTeaByID(id int) (Tea, error) {
 	key := datastore.NameKey(kindTea, strconv.Itoa(id), nil)
 
 	var t Tea
-	if err = client.Get(ctx, key, &t); err != nil {
+	if err := c.client.Get(c.ctx, key, &t); err != nil {
 		return t, err
 	}
 
 	return t, nil
 }
 
-func saveTea(tea Tea) error {
-	ctx := context.Background()
-	client, err := getClient(ctx)
-	if err != nil {
-		return fmt.Errorf("Failed to create client: %v", err)
-	}
-
+func (c *GcpClient) saveTea(tea Tea) error {
 	// Create the Key instance.
 	key := datastore.NameKey(kindTea, strconv.Itoa(tea.ID), nil)
 
 	// Saves the new entity.
-	if _, err := client.Put(ctx, key, &tea); err != nil {
+	if _, err := c.client.Put(c.ctx, key, &tea); err != nil {
 		return fmt.Errorf("Failed to save tea: %v", err)
 	}
 
@@ -188,21 +160,29 @@ func saveTea(tea Tea) error {
 	return nil
 }
 
-func removeTea(teaID int) error {
-	ctx := context.Background()
-	client, err := getClient(ctx)
-	if err != nil {
-		return fmt.Errorf("Failed to create client: %v", err)
-	}
-
+func (c *GcpClient) removeTea(teaID int) error {
 	// Create the Key instance.
 	key := datastore.NameKey(kindTea, strconv.Itoa(teaID), nil)
 
 	// Saves the new entity.
-	if err := client.Delete(ctx, key); err != nil {
+	if err := c.client.Delete(c.ctx, key); err != nil {
 		return fmt.Errorf("Failed to remove tea: %v", err)
 	}
 
 	// fmt.Printf("Saved %v\n", key)
 	return nil
+}
+
+// New creates a new GcpClient
+func New() (*GcpClient, error) {
+	c := new(GcpClient)
+
+	var err error
+	c.ctx = context.Background()
+	c.client, err = datastore.NewClient(c.ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create client: %v", err)
+	}
+
+	return c, nil
 }
