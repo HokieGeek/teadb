@@ -102,11 +102,17 @@ func (c *GcpClient) UpdateEntry(id int, entry TeaEntry) error {
 
 	// TODO: validate
 
+	found := false
 	for i, teaEntry := range tea.Entries {
 		if entry.Datetime.UnixNano() == teaEntry.Datetime.UnixNano() {
+			found = true
 			tea.Entries[i] = entry
 			break
 		}
+	}
+
+	if !found {
+		return fmt.Errorf("Failed to find entry to update: %v", err)
 	}
 
 	return c.saveTea(tea)
