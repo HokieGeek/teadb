@@ -26,23 +26,16 @@ func main() {
 	r.HandleFunc("/tea/{id:[0-9]+}", teaHandler).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/tea/{teaid:[0-9]+}/entry", entryHandler).Methods("HEAD", "GET", "POST", "PUT", "OPTIONS")
 
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "If-None-Match"})
+	exposedOk := handlers.ExposedHeaders([]string{"Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "Etag"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
-	http.ListenAndServe(fmt.Sprintf(":%d", *portPtr), handlers.CORS(originsOk, headersOk, methodsOk)(r))
-}
-
-func cors(w *http.ResponseWriter) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-	(*w).Header().Set("Access-Control-Allow-Methods", "HEAD, POST, GET, OPTIONS, PUT, DELETE")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Requested-With")
+	http.ListenAndServe(fmt.Sprintf(":%d", *portPtr), handlers.CORS(originsOk, headersOk, methodsOk, exposedOk)(r))
 }
 
 func getAllTeasHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s /teas [%s]\n", r.Method, r.RemoteAddr)
-
-	cors(&w)
 
 	if r.Method == http.MethodOptions {
 		return
@@ -61,8 +54,6 @@ func teaHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	log.Printf("%s /tea/%s [%s]\n", r.Method, vars["id"], r.RemoteAddr)
-
-	cors(&w)
 
 	if r.Method == http.MethodOptions {
 		return
@@ -129,8 +120,6 @@ func entryHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%s /tea/%s/entry [%s]\n", r.Method, vars["teaid"], r.RemoteAddr)
 
-	cors(&w)
-
 	if r.Method == http.MethodOptions {
 		return
 	}
@@ -180,7 +169,7 @@ func postJSON(w http.ResponseWriter, r *http.Request, payload interface{}) {
 		if requestedSum == sum {
 			w.WriteHeader(http.StatusNotModified)
 		} else {
-			w.Header().Set("ETag", sum)
+			w.Header().Set("Etag", sum)
 			if r.Method == http.MethodGet {
 				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
