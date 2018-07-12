@@ -26,21 +26,26 @@ func main() {
 		panic(err)
 	}
 
+	cache, err := NewCache()
+	if err != nil {
+		panic(err)
+	}
+
 	r := mux.NewRouter()
 
 	r.HandleFunc("/teas",
 		func(w http.ResponseWriter, r *http.Request) {
-			getAllTeasHandler(w, r, db)
+			getAllTeasHandler(w, r, db, cache)
 		}).Methods("HEAD", "GET", "OPTIONS")
 
 	r.HandleFunc("/tea/{id:[0-9]+}",
 		func(w http.ResponseWriter, r *http.Request) {
-			teaHandler(w, r, db)
+			teaHandler(w, r, db, cache)
 		}).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
 
 	r.HandleFunc("/tea/{teaid:[0-9]+}/entry",
 		func(w http.ResponseWriter, r *http.Request) {
-			entryHandler(w, r, db)
+			entryHandler(w, r, db, cache)
 		}).Methods("HEAD", "GET", "POST", "PUT", "OPTIONS")
 
 	originsOk := handlers.AllowedOrigins([]string{"*"})
@@ -51,14 +56,26 @@ func main() {
 	http.ListenAndServe(fmt.Sprintf(":%d", *portPtr), handlers.CORS(originsOk, headersOk, methodsOk, exposedOk)(r))
 }
 
-func getAllTeasHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
+func getAllTeasHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *Cache) {
 	log.Printf("%s /teas [%s]\n", r.Method, r.RemoteAddr)
 
 	if r.Method == http.MethodOptions {
 		return
 	}
 
-	teas, err := db.GetAllTeas()
+	var teas []teadb.Tea
+	var err error
+	if cache.AllTeasValid() {
+		teas = cache.GetAllTeas()
+		log.Println("Using cache")
+	} else {
+		teas, err = db.GetAllTeas()
+		if err == nil {
+			cache.CacheAllTeas(teas)
+			log.Println("Retrieved and cached")
+		}
+	}
+
 	if err != nil {
 		log.Printf("ERROR: %s\n", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -67,7 +84,7 @@ func getAllTeasHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClie
 	}
 }
 
-func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
+func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *Cache) {
 	vars := mux.Vars(r)
 
 	log.Printf("%s /tea/%s [%s]\n", r.Method, vars["id"], r.RemoteAddr)
@@ -83,7 +100,17 @@ func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 		switch r.Method {
 		case http.MethodHead:
 		case http.MethodGet:
-			tea, err := db.GetTeaByID(id)
+			var tea teadb.Tea
+			var err error
+			if cache.IsTeaValid(id) {
+				tea = cache.GetTea(id)
+			} else {
+				tea, err = db.GetTeaByID(id)
+				if err == nil {
+					cache.SetTea(tea)
+				}
+			}
+
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 			} else {
@@ -99,6 +126,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 					if err = db.CreateTea(tea); err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
 					} else {
+						cache.Invalidate()
 						w.WriteHeader(http.StatusCreated)
 					}
 				}
@@ -113,6 +141,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 					if err = db.UpdateTea(tea); err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
 					} else {
+						cache.Invalidate()
 						w.WriteHeader(http.StatusOK)
 					}
 				}
@@ -125,6 +154,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 				if err = db.DeleteTea(id); err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
+					cache.Invalidate()
 					w.WriteHeader(http.StatusOK)
 				}
 			}
@@ -132,7 +162,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 	}
 }
 
-func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
+func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *Cache) {
 	vars := mux.Vars(r)
 
 	log.Printf("%s /tea/%s/entry [%s]\n", r.Method, vars["teaid"], r.RemoteAddr)
@@ -155,12 +185,13 @@ func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 	switch r.Method {
 	case http.MethodHead:
 	case http.MethodGet:
-		postJSON(w, r, tea)
+		postJSON(w, r, tea) // TODO: fuck.... this is wrong
 	case http.MethodPost:
 		if entry, err := readEntry(w, r); err == nil {
 			if err = db.CreateEntry(tea.ID, entry); err != nil {
 				http.Error(w, "error creating new entry", http.StatusInternalServerError)
 			} else {
+				cache.Invalidate()
 				w.WriteHeader(http.StatusCreated)
 			}
 		}
@@ -170,6 +201,7 @@ func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient) {
 			if err = db.UpdateEntry(tea.ID, entry); err != nil {
 				http.Error(w, "error updating entry", http.StatusInternalServerError)
 			} else {
+				cache.Invalidate()
 				w.WriteHeader(http.StatusOK)
 			}
 		}
