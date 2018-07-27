@@ -81,7 +81,7 @@ add-proxy-server:
   script:
     - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${conf_file} $ADMIN_USER@hokiegeek.net:/tmp
     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo mv /tmp/${conf_file} /etc/hgproxy"
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo systemctl restart hgproxy.service hgproxydev.service"
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo systemctl restart hgproxy.service"
 
 ## Service restarter
 .service-restarter: &service-restarter
