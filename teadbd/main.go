@@ -43,10 +43,10 @@ func main() {
 			teaHandler(w, r, db, cache)
 		}).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
 
-	r.HandleFunc("/tea/{teaid:[0-9]+}/entry",
+	r.HandleFunc("/tea/{teaid:[0-9]+}/entry/{entryid:[0-9]*}",
 		func(w http.ResponseWriter, r *http.Request) {
 			entryHandler(w, r, db, cache)
-		}).Methods("HEAD", "GET", "POST", "PUT", "OPTIONS")
+		}).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
 
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "If-None-Match"})
@@ -165,7 +165,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cac
 func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *Cache) {
 	vars := mux.Vars(r)
 
-	log.Printf("%s /tea/%s/entry [%s]\n", r.Method, vars["teaid"], r.RemoteAddr)
+	log.Printf("%s /tea/%s/entry/%s [%s]\n", r.Method, vars["teaid"], vars["entryid"], r.RemoteAddr)
 
 	if r.Method == http.MethodOptions {
 		return
@@ -176,16 +176,33 @@ func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, c
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
 	tea, err := db.GetTeaByID(teaid)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
+	var entryid int64
+	if len(vars["entryid"]) > 0 && r.Method != http.MethodPost && r.Method != http.MethodPut {
+		entryid, err = strconv.ParseInt(vars["entryid"], 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
 	switch r.Method {
 	case http.MethodHead:
 	case http.MethodGet:
-		postJSON(w, r, tea) // TODO: fuck.... this is wrong
+		var entry teadb.TeaEntry
+		for _, teaEntry := range tea.Entries {
+			if entryid == teaEntry.Datetime.UnixNano() {
+				entry = teaEntry
+				break
+			}
+		}
+		postJSON(w, r, entry)
 	case http.MethodPost:
 		if entry, err := readEntry(w, r); err == nil {
 			if err = db.CreateEntry(tea.ID, entry); err != nil {
@@ -204,6 +221,22 @@ func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, c
 				cache.Invalidate()
 				w.WriteHeader(http.StatusOK)
 			}
+		}
+	case http.MethodDelete:
+		for i, teaEntry := range tea.Entries {
+			log.Printf("%d == %d\n", entryid, teaEntry.Datetime.Unix())
+			if entryid == teaEntry.Datetime.Unix() {
+				log.Printf("   found it! %d: %v\n", i, teaEntry)
+				tea.Entries = append(tea.Entries[:i], tea.Entries[i+1:]...)
+				break
+			}
+		}
+
+		if err = db.UpdateTea(tea); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			cache.Invalidate()
+			w.WriteHeader(http.StatusOK)
 		}
 	}
 }
