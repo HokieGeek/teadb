@@ -43,10 +43,15 @@ func main() {
 			teaHandler(w, r, db, cache)
 		}).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
 
+	r.HandleFunc("/tea/{teaid:[0-9]+}/entry",
+		func(w http.ResponseWriter, r *http.Request) {
+			entryHandler(w, r, db, cache)
+		}).Methods("HEAD", "POST", "PUT", "OPTIONS")
+
 	r.HandleFunc("/tea/{teaid:[0-9]+}/entry/{entryid:[0-9]*}",
 		func(w http.ResponseWriter, r *http.Request) {
 			entryHandler(w, r, db, cache)
-		}).Methods("HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS")
+		}).Methods("HEAD", "GET", "PUT", "DELETE", "OPTIONS")
 
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "If-None-Match"})
