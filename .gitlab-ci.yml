@@ -79,30 +79,19 @@ add-proxy-server:
   variables:
       conf_file: proxy-teadb.conf
   script:
-    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${conf_file} $ADMIN_USER@hokiegeek.net:/tmp
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo mv /tmp/${conf_file} /etc/hgproxy"
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo systemctl restart hgproxy.service"
+    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${conf_file} $ADMIN_USER@${DEPLOY_HOST}:/tmp
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo mv /tmp/${conf_file} /etc/hgproxy"
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo systemctl restart hgproxy.service"
 
 ## Service restarter
 .service-restarter: &service-restarter
   <<: *server-connector-template
   stage: deploy
   script:
-    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${SERVICE} $ADMIN_USER@hokiegeek.net:/tmp
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo mv /tmp/${SERVICE} /etc/systemd/system/ && sudo systemctl daemon-reload"
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@hokiegeek.net "sudo systemctl enable ${SERVICE}; sudo systemctl restart ${SERVICE}"
+    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${SERVICE} $ADMIN_USER@${DEPLOY_HOST}:/tmp
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo mv /tmp/${SERVICE} /etc/systemd/system/ && sudo systemctl daemon-reload"
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo systemctl enable ${SERVICE}; sudo systemctl restart ${SERVICE}"
   retry: 1
-
-restart-service-dev:
-  <<: *service-restarter
-  variables:
-    SERVICE: hgteadbdev.service
-    url: http://tea.hokiegeek.net/dev
-  environment:
-    name: staging
-  except:
-    - tags
-    - master
 
 restart-service:
   <<: *service-restarter
