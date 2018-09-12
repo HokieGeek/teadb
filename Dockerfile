@@ -19,7 +19,7 @@ EXPOSE 443
 
 RUN apk add --no-cache --update ca-certificates
 
-ENV GOOGLE_APPLICATION_CREDENTIALS=/conf/hgnet-tea.json
+ENV GOOGLE_APPLICATION_CREDENTIALS=/conf/hgnet-teadb.json
 
 COPY --from=0 /go/bin/teadbd .
 # COPY teadbd/teadbd .

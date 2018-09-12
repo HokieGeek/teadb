@@ -73,6 +73,17 @@ create-container:
     - echo $HOST_SSH_KEY | base64 -d > /tmp/sshkey
     - chmod 0600 /tmp/sshkey
 
+apply-gcp-svc-secret:
+  <<: *server-connector-template
+  stage: deploy
+  variables:
+      secrets_file: hgnet-teadb.json
+  script:
+    - echo $TEADB_GCP_SVC_ACCT | base64 -d > /tmp/${secrets_file}
+    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ${secrets_file} $ADMIN_USER@${DEPLOY_HOST}:/tmp
+    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo mv /tmp/${secrets_file} /etc/hgteadb"
+  retry: 1
+
 add-proxy-server:
   <<: *server-connector-template
   stage: deploy

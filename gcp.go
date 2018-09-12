@@ -12,7 +12,6 @@ import (
 )
 
 const kindTea = "tea"
-const projectID = "hgnet-tea"
 
 // TeaEntry encapsulates the data needed for a journal entry
 type TeaEntry struct {
@@ -180,7 +179,7 @@ func (c *GcpClient) removeTea(teaID int) error {
 }
 
 // New creates a new GcpClient
-func New() (*GcpClient, error) {
+func New(projectID string) (*GcpClient, error) {
 	c := new(GcpClient)
 
 	var err error

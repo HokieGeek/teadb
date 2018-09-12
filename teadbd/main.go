@@ -18,10 +18,13 @@ import (
 
 func main() {
 	portPtr := flag.Int("port", 80, "Specify the port to use")
+	projectIDPtr := flag.String("project", "", "Need to know the project name")
+
 	flag.Parse()
+
 	fmt.Printf("Serving on port: %d\n", *portPtr)
 
-	db, err := teadb.New()
+	db, err := teadb.New(*projectIDPtr)
 	if err != nil {
 		panic(err)
 	}

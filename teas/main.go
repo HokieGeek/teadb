@@ -22,7 +22,7 @@ func main() {
 
 	command := os.Args[1]
 
-	db, err := teadb.New()
+	db, err := teadb.New("hokiegeek-net")
 	if err != nil {
 		panic(err)
 	}
