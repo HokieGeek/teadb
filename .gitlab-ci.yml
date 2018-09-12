@@ -80,7 +80,7 @@ apply-gcp-svc-secret:
       secrets_file: hgnet-teadb.json
   script:
     - echo $TEADB_GCP_SVC_ACCT | base64 -d > /tmp/${secrets_file}
-    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ${secrets_file} $ADMIN_USER@${DEPLOY_HOST}:/tmp
+    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no /tmp/${secrets_file} $ADMIN_USER@${DEPLOY_HOST}:/tmp
     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo mv /tmp/${secrets_file} /etc/hgteadb"
   retry: 1
 
