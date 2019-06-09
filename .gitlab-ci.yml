@@ -29,6 +29,8 @@ build:
 unit-test:
   <<: *prep-go-build
   stage: test
+  before_script:
+    - apk add --update build-base
   script:
     - go test -v -cover ./...
 
