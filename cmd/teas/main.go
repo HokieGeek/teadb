@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"gitlab.com/hokiegeek.net/teadb"
+	"git.sr.ht/~hokiegeek.net/teadb"
 )
 
 func main() {

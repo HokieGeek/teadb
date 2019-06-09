@@ -11,9 +11,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"git.sr.ht/~hokiegeek.net/teadb"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"gitlab.com/hokiegeek.net/teadb"
 )
 
 func main() {

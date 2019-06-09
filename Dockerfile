@@ -7,7 +7,7 @@ ENV GOARCH amd64
 
 RUN apk add --update git
 
-WORKDIR /go/src/gitlab.com/hokiegeek.net/teadb
+WORKDIR /go/src/git.sr.ht/~hokiegeek.net/teadb
 
 COPY . .
 

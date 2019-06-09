@@ -1,4 +1,4 @@
-module gitlab.com/hokiegeek.net/teadb
+module git.sr.ht/~hokiegeek.net/teadb
 
 go 1.12
 
