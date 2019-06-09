@@ -17,7 +17,7 @@ cache:
   before_script:
     - mkdir -p /go/src/gitlab.com/hokiegeek.net/teadb
     - cp -r . /go/src/gitlab.com/hokiegeek.net/teadb
-    - apk add --update git
+    - apk add --update git build-base
       # - go get -d -v ./...
 
 build:
@@ -29,8 +29,6 @@ build:
 unit-test:
   <<: *prep-go-build
   stage: test
-  before_script:
-    - apk add --update build-base
   script:
     - go test -v -cover ./...
 
