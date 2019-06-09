@@ -1,6 +1,6 @@
 image: alpine/edge
 packages:
-  - golang
+  - go
   - git
   - build-base
   - docker
