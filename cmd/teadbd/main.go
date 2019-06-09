@@ -29,7 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	cache, err := NewCache()
+	cache, err := teadb.NewCache()
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +64,7 @@ func main() {
 	http.ListenAndServe(fmt.Sprintf(":%d", *portPtr), handlers.CORS(originsOk, headersOk, methodsOk, exposedOk)(r))
 }
 
-func getAllTeasHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *Cache) {
+func getAllTeasHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *teadb.Cache) {
 	log.Printf("%s /teas [%s]\n", r.Method, r.RemoteAddr)
 
 	if r.Method == http.MethodOptions {
@@ -92,7 +92,7 @@ func getAllTeasHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClie
 	}
 }
 
-func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *Cache) {
+func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *teadb.Cache) {
 	vars := mux.Vars(r)
 
 	log.Printf("%s /tea/%s [%s]\n", r.Method, vars["id"], r.RemoteAddr)
@@ -170,7 +170,7 @@ func teaHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cac
 	}
 }
 
-func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *Cache) {
+func entryHandler(w http.ResponseWriter, r *http.Request, db *teadb.GcpClient, cache *teadb.Cache) {
 	vars := mux.Vars(r)
 
 	log.Printf("%s /tea/%s/entry/%s [%s]\n", r.Method, vars["teaid"], vars["entryid"], r.RemoteAddr)

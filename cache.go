@@ -1,26 +1,24 @@
-package main
+package teadb
 
 import (
 	"log"
-
-	"gitlab.com/hokiegeek.net/teadb"
 )
 
 type cachedAllTeas struct {
 	Valid bool
-	Item  []teadb.Tea
+	Item  []Tea
 }
 
 type cachedTea struct {
 	Valid bool
-	Item  teadb.Tea
+	Item  Tea
 }
 
 /*
 type CachedTeaEntry struct {
 	checksum string
 	valid bool
-	item teadb.TeaEntry
+	item TeaEntry
 }
 
 func (c *CachedTeaEntry) invalidate() {
@@ -49,12 +47,12 @@ func (c *Cache) AllTeasValid() bool {
 }
 
 // GetAllTeas returns the teas
-func (c *Cache) GetAllTeas() []teadb.Tea {
+func (c *Cache) GetAllTeas() []Tea {
 	return c.teas.Item
 }
 
 // CacheAllTeas caches teas array
-func (c *Cache) CacheAllTeas(t []teadb.Tea) {
+func (c *Cache) CacheAllTeas(t []Tea) {
 	c.teas = new(cachedAllTeas)
 	c.teas.Valid = true
 	c.teas.Item = t
@@ -67,12 +65,12 @@ func (c *Cache) IsTeaValid(id int) bool {
 }
 
 // GetTea returns a cached tea
-func (c *Cache) GetTea(id int) teadb.Tea {
+func (c *Cache) GetTea(id int) Tea {
 	return c.teaByID[id].Item
 }
 
 // SetTea returns a cached tea
-func (c *Cache) SetTea(tea teadb.Tea) {
+func (c *Cache) SetTea(tea Tea) {
 	ct := new(cachedTea)
 	ct.Valid = true
 	ct.Item = tea

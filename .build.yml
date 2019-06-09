@@ -1,0 +1,53 @@
+image: alpine/edge
+packages:
+  - golang
+  - git
+  - docker
+  - shadow
+  - ansible
+sources:
+  - https://gitlab.com/hokiegeek.net/teadb
+environment:
+  PROJ: teadb
+  CI_COMMIT_TAG: $(git --work-tree=./teadb --git-dir=./teadb/.git describe)
+  CI_REGISTRY: quay.io
+  CI_REGISTRY_USER: hokiegeek
+  ADMIN_USER: hokiegeek
+  DEPLOY_HOST: hokiegeek.net
+secrets:
+  - d675b280-e56b-4c0f-9908-549c70a7e2f9
+  - d036fc7d-4eb9-4589-9d37-f61214d4fcb3
+tasks:
+  - setup: |
+      sudo mount -t tmpfs -o size=4G /dev/null /dev/shm
+      sudo service cgroups start
+      sleep 2
+      sudo nohup dockerd --bip 172.18.0.1/16 </dev/null >/dev/null 2>&1 &
+      sleep 5
+      sudo addgroup $(whoami) docker
+      # - build: |
+      #     cd ${PROJ}
+      #     go build -v ./...
+      # - lint: |
+      #     cd ${PROJ}
+      #     npm run lint
+      # - build: |
+      #     cd ${PROJ}
+      #     npm run build
+      # - test: |
+      #     export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
+      #     export CHROME_BIN="/usr/bin/chromium-browser"
+      #     cd ${PROJ}
+      #     npm run test
+      # - package: |
+      #     cd ${PROJ}
+      #     IMAGE=${CI_REGISTRY}/hokiegeek/${PROJ}
+      #     IMAGE_TAG=${IMAGE}:${CI_COMMIT_TAG}
+      #     IMAGE_LATEST_TAG=${IMAGE}:latest
+      #     docker build -t $IMAGE_TAG -t $IMAGE_LATEST_TAG .
+      #     cat $HOME/.image_registry_token | docker login --username ${CI_REGISTRY_USER} --password-stdin ${CI_REGISTRY}
+      #     docker push $IMAGE_TAG
+      #     docker push $IMAGE_LATEST_TAG
+      # - deploy: |
+      #     cd ${PROJ}/prod
+      #     ansible-playbook -i ${DEPLOY_HOST}, -u ${ADMIN_USER} -e image=${CI_REGISTRY}/hokiegeek/${PROJ}:latest ./ansible.yml

@@ -1,4 +1,4 @@
-image: golang:1.10-alpine
+image: golang:1.12-alpine
 
 stages:
     - build
@@ -18,7 +18,7 @@ cache:
     - mkdir -p /go/src/gitlab.com/hokiegeek.net/teadb
     - cp -r . /go/src/gitlab.com/hokiegeek.net/teadb
     - apk add --update git
-    - go get -d -v ./...
+      # - go get -d -v ./...
 
 build:
   <<: *prep-go-build
@@ -90,7 +90,7 @@ add-proxy-server:
   variables:
       conf_file: proxy-teadb.conf
   script:
-    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${conf_file} $ADMIN_USER@${DEPLOY_HOST}:/tmp
+    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod/${conf_file} $ADMIN_USER@${DEPLOY_HOST}:/tmp
     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo mv /tmp/${conf_file} /etc/nginx/conf.d && sudo systemctl restart hgproxy.service"
   retry: 1
 
@@ -99,7 +99,7 @@ add-proxy-server:
   <<: *server-connector-template
   stage: deploy
   script:
-    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod-conf/${SERVICE} $ADMIN_USER@${DEPLOY_HOST}:/tmp
+    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod/${SERVICE} $ADMIN_USER@${DEPLOY_HOST}:/tmp
     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo mv /tmp/${SERVICE} /etc/systemd/system/ && sudo systemctl daemon-reload"
     - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo systemctl enable ${SERVICE}; sudo systemctl restart ${SERVICE}"
   retry: 1

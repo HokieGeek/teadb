@@ -1,27 +1,33 @@
 ### Build the code
-FROM golang:1.10-alpine
+FROM golang:1.12-alpine
+
+ENV GO111MODULE on
+ENV GOOS linux
+ENV GOARCH amd64
 
 RUN apk add --update git
 
-COPY . /go/src/gitlab.com/hokiegeek.net/teadb
-
 WORKDIR /go/src/gitlab.com/hokiegeek.net/teadb
 
-RUN go get -d -v ./...
-RUN go install -v ./...
-RUN go test -v ./...
+COPY . .
+
+RUN go install -v -ldflags="-w -s" ./...
 
 ### Package it up
 FROM alpine
 
-EXPOSE 80
-EXPOSE 443
+VOLUME /conf
 
-RUN apk add --no-cache --update ca-certificates
+EXPOSE 80
 
 ENV GOOGLE_APPLICATION_CREDENTIALS=/conf/hgnet-teadb.json
 
+RUN apk add --no-cache --update ca-certificates
+
+# RUN addgroup -S gouser && adduser -S -G gouser gouser
+
+# USER gouser
+
 COPY --from=0 /go/bin/teadbd .
-# COPY teadbd/teadbd .
 
 ENTRYPOINT ["./teadbd"]
