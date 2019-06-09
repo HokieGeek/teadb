@@ -1,0 +1,36 @@
+---
+- name: Deploy teadb site
+  hosts: all
+  tasks:
+      - name: teadb | Create the proxy config directory
+        file:
+          path: /etc/nginx/conf.d
+          state: directory
+        become: yes
+      - name: teadb | Add the proxy config
+        copy:
+          src: proxy-teadb.conf
+          dest: /etc/nginx/conf.d/proxy-teadb.conf
+          mode: 644
+        become: yes
+      - name: teadb | Add the systemd unit
+        template:
+          src: hgteadb.service.j2
+          dest: /etc/systemd/system/hgteadb.service
+          mode: 644
+        become: yes
+      - name: teadb | Start service
+        systemd:
+          name: hgteadb
+          enabled: yes
+          state: restarted
+          masked: no
+          daemon_reload: yes
+        become: yes
+      - name: teadb | Restart proxy
+        systemd:
+          name: hgproxy
+          state: restarted
+          daemon_reload: yes
+        become: yes
+

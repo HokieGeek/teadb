@@ -2,11 +2,12 @@ image: alpine/edge
 packages:
   - golang
   - git
+  - build-base
   - docker
   - shadow
   - ansible
 sources:
-  - https://gitlab.com/hokiegeek.net/teadb
+  - https://git.sr.ht/~hokiegeek/teadb
 environment:
   PROJ: teadb
   CI_COMMIT_TAG: $(git --work-tree=./teadb --git-dir=./teadb/.git describe)
@@ -25,29 +26,21 @@ tasks:
       sudo nohup dockerd --bip 172.18.0.1/16 </dev/null >/dev/null 2>&1 &
       sleep 5
       sudo addgroup $(whoami) docker
-      # - build: |
-      #     cd ${PROJ}
-      #     go build -v ./...
-      # - lint: |
-      #     cd ${PROJ}
-      #     npm run lint
-      # - build: |
-      #     cd ${PROJ}
-      #     npm run build
-      # - test: |
-      #     export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
-      #     export CHROME_BIN="/usr/bin/chromium-browser"
-      #     cd ${PROJ}
-      #     npm run test
-      # - package: |
-      #     cd ${PROJ}
-      #     IMAGE=${CI_REGISTRY}/hokiegeek/${PROJ}
-      #     IMAGE_TAG=${IMAGE}:${CI_COMMIT_TAG}
-      #     IMAGE_LATEST_TAG=${IMAGE}:latest
-      #     docker build -t $IMAGE_TAG -t $IMAGE_LATEST_TAG .
-      #     cat $HOME/.image_registry_token | docker login --username ${CI_REGISTRY_USER} --password-stdin ${CI_REGISTRY}
-      #     docker push $IMAGE_TAG
-      #     docker push $IMAGE_LATEST_TAG
-      # - deploy: |
-      #     cd ${PROJ}/prod
-      #     ansible-playbook -i ${DEPLOY_HOST}, -u ${ADMIN_USER} -e image=${CI_REGISTRY}/hokiegeek/${PROJ}:latest ./ansible.yml
+  - build: |
+      cd ${PROJ}
+      go build -v ./...
+  - test: |
+      cd ${PROJ}
+      go test -v -cover ./...
+  - package: |
+      cd ${PROJ}
+      IMAGE=${CI_REGISTRY}/hokiegeek/${PROJ}
+      IMAGE_TAG=${IMAGE}:${CI_COMMIT_TAG}
+      IMAGE_LATEST_TAG=${IMAGE}:latest
+      docker build -t $IMAGE_TAG -t $IMAGE_LATEST_TAG .
+      cat $HOME/.image_registry_token | docker login --username ${CI_REGISTRY_USER} --password-stdin ${CI_REGISTRY}
+      docker push $IMAGE_TAG
+      docker push $IMAGE_LATEST_TAG
+  - deploy: |
+      cd ${PROJ}/prod
+      ansible-playbook -i ${DEPLOY_HOST}, -u ${ADMIN_USER} -e image=${CI_REGISTRY}/hokiegeek/${PROJ}:latest ./ansible.yml

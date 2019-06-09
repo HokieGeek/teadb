@@ -66,52 +66,18 @@ create-container:
   except:
     - branches
 
-.server-connector-template: &server-connector-template
-  image: alpine:latest
+deploy-and-restart:
+  stage: deploy
+  image: alpine:edge
+  variables:
+    IMAGE_LATEST_TAG: $CI_REGISTRY_IMAGE:latest
   before_script:
-    - apk add --update --no-cache openssh
+    - apk update && apk upgrade
+    - apk add --no-cache ansible
     - echo $HOST_SSH_KEY | base64 -d > /tmp/sshkey
     - chmod 0600 /tmp/sshkey
-
-apply-gcp-svc-secret:
-  <<: *server-connector-template
-  stage: deploy
-  variables:
-      secrets_file: hgnet-teadb.json
+    - echo "${DEPLOY_HOST} ansible_ssh_private_key_file=/tmp/sshkey" > /tmp/host
   script:
-    - echo $TEADB_GCP_SVC_ACCT | base64 -d > /tmp/${secrets_file}
-    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no /tmp/${secrets_file} $ADMIN_USER@${DEPLOY_HOST}:/tmp
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo mkdir -p /etc/hgteadb && sudo mv /tmp/${secrets_file} /etc/hgteadb"
-  retry: 1
-
-add-proxy-server:
-  <<: *server-connector-template
-  stage: deploy
-  variables:
-      conf_file: proxy-teadb.conf
-  script:
-    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod/${conf_file} $ADMIN_USER@${DEPLOY_HOST}:/tmp
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo mv /tmp/${conf_file} /etc/nginx/conf.d && sudo systemctl restart hgproxy.service"
-  retry: 1
-
-## Service restarter
-.service-restarter: &service-restarter
-  <<: *server-connector-template
-  stage: deploy
-  script:
-    - scp -i /tmp/sshkey -o StrictHostKeyChecking=no ./prod/${SERVICE} $ADMIN_USER@${DEPLOY_HOST}:/tmp
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo mv /tmp/${SERVICE} /etc/systemd/system/ && sudo systemctl daemon-reload"
-    - ssh -i /tmp/sshkey -o StrictHostKeyChecking=no $ADMIN_USER@${DEPLOY_HOST} "sudo systemctl enable ${SERVICE}; sudo systemctl restart ${SERVICE}"
-  retry: 1
-
-restart-service:
-  <<: *service-restarter
-  variables:
-    SERVICE: hgteadb.service
-  environment:
-    name: production
-    url: http://tea.hokiegeek.net
-  only:
-    - tags
-  except:
-    - branches
+    - chmod 755 prod
+    - cd ./prod
+    - ansible-playbook -i /tmp/host -u ${ADMIN_USER} -e image=${IMAGE_LATEST_TAG} ./ansible.yml
