@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"git.sr.ht/~hokiegeek.net/teadb"
+	"git.sr.ht/~hokiegeek/teadb"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
